@@ -7,50 +7,111 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="header-main">
-                <h1>WebBenchmark!</h1>
-                <p>Client-Side WASM Hardware Profile</p>
+    <div class="app-wrapper">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <nav class="sidebar closed" id="sidebar">
+            <div class="sidebar-top">
+                <p class="sidebar-label">History</p>
             </div>
-
-            <div class="top-controls">
-                <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
-                <button id="theme-toggle" class="icon-btn" title="Toggle Theme">🌙</button>
+            
+            <div class="sidebar-bottom">
+                <button id="settings-open-btn" class="sidebar-set-btn">Settings</button>
             </div>
-        </header>
+        </nav>
 
-        <main class = "dashboard">
-            <aside class = "metrics-panel">
-                <div class="metric-box">
-                    <h3>Status</h3>
-                    <span id="status-text" class = "status idle">Ready</span>
-                </div>
-                <div class="metric-box">
-                    <h3>Logical Cores</h3>
-                    <span id="core-count">Detecting...</span>
-                </div>
-                <div class="metrix-box">
-                    <h3>Current Speed</h3>
-                    <span id="gflops-current">0.00 GFLOPS</span>
-                </div>
+        <main class="main-content">
+            <header class="full-width-header">
+                <button id="menu-btn" class="icon-btn floating-menu-btn" title="Menu">
+                    <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
+                     width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                     <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>
+                    </svg>
+                </button>
 
-                <div class="controls">
-                    <button id="start-btn" class = "btn primary">Start Stress Test</button>
-                    <button id="stop-btn" class="btn secondary" disabled>Stop</button>
+                <div class="header-main">
+                    <h1 class="animated-gradient-text">WebBenchmark!</h1>
+                    <p class="subtitle">Client-Side WASM Hardware Profile</p>
                 </div>
-            </aside>
+            </header>
 
-            <section class="visualizer-panel">
-                <div class="visualizer-header">
-                    <h2>Live Core HeatMap</h2>
+            <div class="container">
+                <section class="test-selector-panel">
+                    <h3>Select Benchmarks</h3>
+                    <div class="test-options">
+                        <label class="test-checkbox"><input type="checkbox" checked> CPU Matrix Heatmap</label>
+                        <label class="test-checkbox"><input type="checkbox" disabled> Memory Bandwidth <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
+                        <label class="test-checkbox"><input type="checkbox" disabled> SIMD Compute <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
+                        <label class="test-checkbox"><input type="checkbox" disabled> AI Background Load <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
+                        <label class="test-checkbox"><input type="checkbox" disabled> Game Test! <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
+                    </div>
+                </section>
+                
+                <!-- Mark AI Chat Panel -->
+                <section class="ai-chat-panel">
+                    <input type="text" class="ai-chat-input" placeholder="Ask Mark AI about your system performance...">
+                    <button class="ai-chat-send-btn" title="Send to Mark AI">
+                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                    </button>
+                </section>
+
+                <div class="dashboard">
+                    <!-- Metrics Panel -->
+                    <aside class = "metrics-panel">
+                        <div class="metric-box">
+                            <h3>Status</h3>
+                            <span id="status-text" class = "status idle">Ready</span>
+                        </div>
+                        <div class="metric-box">
+                            <h3>Logical Cores</h3>
+                            <span id="core-count">Detecting...</span>
+                        </div>
+                        <div class="metrix-box">
+                            <h3>Current Speed</h3>
+                            <span id="gflops-current">0.00 GFLOPS</span>
+                        </div>
+
+                        <div class="controls">
+                            <div class="controls-row">
+                                <button id="start-btn" class = "btn primary">Start Stress Test</button>
+                                <button id="stop-btn" class="btn secondary is-disabled">Stop</button>
+                            </div>
+                            <p id="warning-msg" class="status-warning-msg">Please start the stress test first!</p>
+                        </div>
+                    </aside>
+
+                    <!-- Graphs Grid -->
+                    <section class="visualizer-panel">
+                        <div class="visualizer-header">
+                            <h2>Live Performance Graphs</h2>
+                        </div>
+                        <div class="graphs-grid">
+                            <div class="canvas-container">
+                                <canvas id="heatmap-canvas"></canvas>
+                                <div class="placeholder-text">Awaiting CPU Matrix...</div>
+                            </div>
+                            <div class="canvas-container blank-graph">
+                                <div class="placeholder-text">Awaiting Memory Test...</div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-                <div class="canvas-container">
-                    <canvas id="heatmap-canvas"></canvas>
-                    <div id="placeholder-text">Awaiting execution...</div>
-                </div>
-            </section>
+            </div>
         </main>
+    </div>
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button id="settings-close-btn" class="close-btn" title="Close Settings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <span>Appearance</span>
+                    <button id="theme-toggle-btn" class="btn">Switch to Light Mode</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script type="module" src="/src/main.js"></script>
 
