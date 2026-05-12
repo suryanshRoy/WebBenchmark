@@ -346,8 +346,8 @@ body.light-mode {
     align-items: center;
     justify-content: center;
     transition: transform 0.1s ease, background-color 0.2s ease;
-    width: 46px;
-    height: 46px;
+    width: 42px;
+    height: 42px;
 }
 .icon-btn:hover {background-color: rgba(136, 136, 136, 0.1); }
 .icon-btn:active {
@@ -426,13 +426,13 @@ body.light-mode {
 }
 .status-warning-msg.show-warning {opacity: 1; transform: translateY(0); }
 
-@keyframes error-shake {
+@keyframes error-vibrate {
     0%, 100% {transform: translateX(0);}
     20%, 60% {transform: translateX(-5px);}
     40%, 80% {transform: translateX(5px);}
 }
-.shake-active {
-    animation: error-shake 0.3s ease-in-out;
+.vibrate-active {
+    animation: error-vibrate 0.3s ease-in-out;
     border: 1px solid var(--danger) !important;
 }
 

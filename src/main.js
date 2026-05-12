@@ -58,40 +58,95 @@ themeToggleBtn.addEventListener('click', () => {
     }
 });
 
-startBtn.addEventListener('click', () => {
-    statusText.innerText = "Initializing Engine...";
-    statusText.classList.remove('idle');
-    statusText.classList.add('running');
-    
-    stopBtn.classList.remove('is-disabled');
-    warningMsg.classList.remove('show-warning'); 
-    
-    console.log("Start button clicked!");
-});
-
-stopBtn.addEventListener('click', () => {
-    if (stopBtn.classList.contains('is-disabled')) {
-        // Visual vibration and warning message
-        stopBtn.classList.add('shake-active'); 
-        setTimeout(() => stopBtn.classList.remove('shake-active'), 300);
-
-        warningMsg.classList.add('show-warning');
-        setTimeout (() => warningMsg.classList.remove('show-warning'), 2500);
-    } 
-    else {
-        console.log("Benchmark execution stopped!");
-        stopBtn.classList.add('is-disabled');
-        
-        statusText.innerText = 'Ready';
-        statusText.classList.remove('running');
-        statusText.classList.add('idle');
-    }
-});
-
 // for UI pop
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         const cores = navigator.hardwareConcurrency || 'Unknown';
         document.getElementById('core-count').innerText = `${cores} Threads Available`;
     }, 800);
+});
+
+
+// --WEBASSEMBLY ENGINE--
+
+const gflopsDisplay = document.getElementById('gflops-current');
+let wasmModule = null;
+let isEngineRunning = false;
+
+const MATRIX_SIZE = 512; // For Medium test
+// (N^3) Operations per matrix multiplication
+const FLOP_PER_ITERATION = 2* Math.pow(MATRIX_SIZE, 3); 
+
+// Initialize WBSMBLY
+// Initialize WBSMBLY
+if (typeof createEngine !== 'undefined') {
+    createEngine().then((Module) => {
+        wasmModule = Module;
+        wasmModule._init_memory(MATRIX_SIZE);
+        console.log("WebAssembly Engine Loaded & Memory feeded");
+        statusText.innerText = 'Ready';
+    });
+} else {
+    console.error("engine.js not found. Make sure you ran the emcc compile command.");
+}
+
+// --BENCHMARK LOOP
+
+function runBenchmarkLoop() {
+    if (!isEngineRunning) return; // Stop the loop if user clicked Stop
+
+    const iterations = 10;
+
+    const startTime = performance.now();
+
+    wasmModule._run_stress_test(iterations);
+
+    const endTime = performance.now();
+    const timeTakenSeconds = (endTime - startTime) / 1000;
+    const totalFlops = FLOP_PER_ITERATION * iterations;
+    const gflops = (totalFlops / timeTakenSeconds) /1e9;
+
+    gflopsDisplay.innerText = `${gflops.toFixed(2)} GFLOPS`; 
+
+    setTimeout(runBenchmarkLoop, 0);
+}
+
+// --Engine Controls--
+startBtn.addEventListener('click', () => {
+    if (!wasmModule) {
+        warningMsg.innerText = "Error: Engine not compiled yet!";
+        warningMsg.classList.add('show-warning');
+        setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
+        return;
+    }
+
+    statusText.innerText = "Running Stress Test...";
+    statusText.classList.remove('idle');
+    statusText.classList.add('running');
+
+    stopBtn.classList.remove('is-disabled');
+    warningMsg.classList.remove('show-warning');
+
+    isEngineRunning = true; 
+    runBenchmarkLoop();
+});
+
+stopBtn.addEventListener('click', () => {
+    if (stopBtn.classList.contains('is-disabled')) {
+        warningMsg.innerText = "Please start the stress test first!";
+        
+        stopBtn.classList.add('vibrate-active');
+        // YOU MISSED THESE THREE LINES BELOW:
+        setTimeout(() => stopBtn.classList.remove('vibrate-active'), 300);
+        warningMsg.classList.add('show-warning');
+        setTimeout(() => warningMsg.classList.remove('show-warning'), 2500);
+    }
+    else {
+        isEngineRunning = false;
+
+        stopBtn.classList.add('is-disabled');
+        statusText.innerText = 'Ready';
+        statusText.classList.remove('running');
+        statusText.classList.add('idle');
+    }
 });
