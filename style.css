@@ -43,7 +43,7 @@ body.light-mode {
 .app-wrapper {
     display: flex;
     height: 100vh;
-    width: 100vw;
+    width: 100%;
     position: relative; 
 }
 
@@ -147,10 +147,12 @@ body.light-mode {
 
 .header-main {
     text-align: center;
+    padding: 0 4rem;
+    word-break: break-word;
 }
 
 .animated-gradient-text {
-    font-size: 2.5rem; 
+    font-size: clamp(1.5rem, 6vw, 2.5rem);
     font-weight: 800; 
     margin: 0;
     background: linear-gradient(270deg, rgb(255, 60, 80), rgb(156, 136, 255), rgb(0, 255, 204), rgb(255, 90, 70));
@@ -290,8 +292,9 @@ body.light-mode {
 
 .metric-box span{
     font-family: var(--font-mono);
-    font-size: 1.5rem;
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
     font-weight: bold;
+    word-break: break-word;
 }
 
 .status.idle {color:var(--text-muted); }
@@ -307,10 +310,11 @@ body.light-mode {
     display: flex;
     gap: 1rem;
     width: 100%;
+    flex-wrap: wrap;
 }
 
 .btn {
-    flex: 1;
+    flex: 1 1 120px; /* Allow btn to grow, shrink, min_size = 120px */
     padding: 0.8rem;
     border: none;
     border-radius: 4px;
@@ -497,12 +501,13 @@ body.light-mode {
         height: 100vh;
         transform: translateX(0); 
         z-index: 50;
+        width: min(260px, 60%); /* For sidebar min_size of 60% */
     }
 
     .sidebar.closed {
         transform: translateX(-100%); 
         opacity: 1; 
-        width: 260px; 
+        width: min(260px, 60%); 
     }
 
     .sidebar-overlay.active {
