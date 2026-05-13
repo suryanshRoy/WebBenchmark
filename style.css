@@ -54,12 +54,15 @@ body.light-mode {
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     padding: 1rem;
     transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
     overflow: hidden;
     white-space: nowrap; 
     z-index: 50; 
+
+    height: 100vh;
+    box-sizing: border-box;
+    overflow-y: auto;
 }
 
 .sidebar.closed {
@@ -70,10 +73,13 @@ body.light-mode {
     border-right: none;
 }
 
-.sidebar-top, .sidebar-bottom {
+.sidebar-bottom {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+
+    margin-top: auto;
+    padding-bottom: 1rem;
 }
 
 .sidebar-label {
