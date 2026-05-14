@@ -9,13 +9,12 @@ const menuBtn = document.getElementById('menu-btn');
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 
-// Modal elements
+// UI elements
 const settingsOpenBtn = document.getElementById('settings-open-btn');
 const settingsCloseBtn = document.getElementById('settings-close-btn');
 const settingsModal = document.getElementById('settings-modal');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 
-// --- SIDEBAR LOGIC (Mobile slide overlay) --- //
 function toggleSidebar() {
     sidebar.classList.toggle('closed');
     sidebarOverlay.classList.toggle('active');
@@ -23,16 +22,14 @@ function toggleSidebar() {
 
 menuBtn.addEventListener('click', toggleSidebar);
 
-// Clicking overlay on mobile closes sidebar
 sidebarOverlay.addEventListener('click', () => {
     if(!sidebar.classList.contains('closed')) {
         toggleSidebar();
     }
 });
 
-// --- MODAL & SETTINGS LOGIC --- //
 settingsOpenBtn.addEventListener('click', () => {
-    // Close sidebar when opening settings on mobile
+    // close sidebar when opening settings on mobile
     if(window.innerWidth <= 850 && !sidebar.classList.contains('closed')) {
         toggleSidebar();
     }
@@ -69,51 +66,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --WEBASSEMBLY ENGINE--
 
-const gflopsDisplay = document.getElementById('gflops-current');
-let wasmModule = null;
-let isEngineRunning = false;
-
 const MATRIX_SIZE = 512; // For Medium test
-// (N^3) Operations per matrix multiplication
 const FLOP_PER_ITERATION = 2* Math.pow(MATRIX_SIZE, 3); 
 
-// Initialize WBSMBLY
-// Initialize WBSMBLY
-if (typeof createEngine !== 'undefined') {
-    createEngine().then((Module) => {
-        wasmModule = Module;
-        wasmModule._init_memory(MATRIX_SIZE);
-        console.log("WebAssembly Engine Loaded & Memory feeded");
+// --WASM Worker Setup--
+
+const gflopsDisplay = document.getElementById('gflops-current');
+let isEngineRunning = false;
+let isEngineReady = false;
+
+const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
+
+benchmarkWorker.onmessage = function(event) {
+    const data = event.data;
+
+    if (data.type === 'READY') {
+        console.log('WASM Worker Loaded & Ready');
         statusText.innerText = 'Ready';
-    });
-} else {
-    console.error("engine.js not found. Make sure you ran the emcc compile command.");
-}
+        isEngineReady = true;
+    }
+    else if (data.type === 'UPDATE'){
+        gflopsDisplay.innerText = `${data.gflops} GFLOPS`;
+    }
+};
 
-// --BENCHMARK LOOP
-
-function runBenchmarkLoop() {
-    if (!isEngineRunning) return; // Stop the loop if user clicked Stop
-
-    const iterations = 10;
-
-    const startTime = performance.now();
-
-    wasmModule._run_stress_test(iterations);
-
-    const endTime = performance.now();
-    const timeTakenSeconds = (endTime - startTime) / 1000;
-    const totalFlops = FLOP_PER_ITERATION * iterations;
-    const gflops = (totalFlops / timeTakenSeconds) /1e9;
-
-    gflopsDisplay.innerText = `${gflops.toFixed(2)} GFLOPS`; 
-
-    setTimeout(runBenchmarkLoop, 0);
+benchmarkWorker.onerror = function(error) {
+    console.error("Worker error: ", error);
 }
 
 // --Engine Controls--
 startBtn.addEventListener('click', () => {
-    if (!wasmModule) {
+    if (!isEngineReady) {
         warningMsg.innerText = "Error: Engine not compiled yet!";
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
@@ -128,7 +111,7 @@ startBtn.addEventListener('click', () => {
     warningMsg.classList.remove('show-warning');
 
     isEngineRunning = true; 
-    runBenchmarkLoop();
+    benchmarkWorker.postMessage({type: 'START', iterations: 20});
 });
 
 stopBtn.addEventListener('click', () => {
@@ -136,13 +119,14 @@ stopBtn.addEventListener('click', () => {
         warningMsg.innerText = "Please start the stress test first!";
         
         stopBtn.classList.add('vibrate-active');
-        // YOU MISSED THESE THREE LINES BELOW:
         setTimeout(() => stopBtn.classList.remove('vibrate-active'), 300);
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 2500);
     }
     else {
         isEngineRunning = false;
+
+        benchmarkWorker.postMessage({type: 'STOP'});
 
         stopBtn.classList.add('is-disabled');
         statusText.innerText = 'Ready';

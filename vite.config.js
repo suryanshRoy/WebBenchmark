@@ -1,5 +1,7 @@
-import { defineConfig } from 'vite'
+// vite.config.js
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/WebBenchmark/', 
-})
+  // use relative paths for GitHub pages
+  base: './', 
+});
