@@ -1,40 +1,37 @@
 const MATRIX_SIZE = 512;
 const FLOP_PER_ITERATION = 2 * Math.pow(MATRIX_SIZE, 3);
 
-let wasmModule = null;
+let engineInstance = null;
 let isEngineRunning = false;
 
-importScripts('../engine.js');
+let basePath = '/';
+if (self.location.pathname.includes('/WebBenchmark/')) {
+    basePath = '/WebBenchmark/';
+}
+
+importScripts(basePath + 'engine.js');
 
 createEngine({
-    locateFile: function(path, prefix) {
-        if (path.endsWith('.wasm')) {
-            const workerPath = self.location.pathname;
-            const assetsIndex = workerPath.lastIndexOf('assets/');
-            
-            if (assetsIndex !== -1) {
-                const rootPath = workerPath.substring(0, assetsIndex);
-                return self.location.origin + rootPath + path;
-            } else {
-                // Local Development fallback
-                return '../' + path;
-            }
-        }
-        return prefix + path; // Fallback for any other files
+    mainScriptUrlOrBlob: basePath + 'engine.js', 
+    locateFile: function(path) {
+        return basePath + path;
     }
 }).then((Module) => {
-    wasmModule = Module;
-    wasmModule._init_memory(MATRIX_SIZE);
+    console.log("ENGINE LOADED!");
+    engineInstance = Module;
+    engineInstance._init_memory(MATRIX_SIZE);
     
     postMessage({type: 'READY'});
+}).catch((error) => {
+    console.error("FATAL ENGINE ERROR:", error);
 });
 
 function runBenchmarkLoop(iterations) {
-    if (!isEngineRunning || !wasmModule) return;
+    if (!isEngineRunning || !engineInstance) return;
 
     const startTime = performance.now();
     
-    wasmModule._run_stress_test(iterations);
+    engineInstance._run_stress_test(iterations);
 
     const endTime = performance.now();
     const timeTakenSeconds = (endTime-startTime) / 1000;
