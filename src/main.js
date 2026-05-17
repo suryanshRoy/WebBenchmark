@@ -15,6 +15,16 @@ const settingsCloseBtn = document.getElementById('settings-close-btn');
 const settingsModal = document.getElementById('settings-modal');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 
+// Processor & GPU variables
+const processorSelect = document.getElementById('processor-select');
+const optGPU = document.getElementById('opt-GPU');
+const gpuWarnMsg = document.getElementById('gpu-warning-msg');
+const cpuWarnMsg = document.getElementById('cpu-warning-msg');
+
+let currentProcessor = 'GPU';
+let showGpuFallbackMsg = true;
+
+
 function toggleSidebar() {
     sidebar.classList.toggle('closed');
     sidebarOverlay.classList.toggle('active');
@@ -103,7 +113,7 @@ startBtn.addEventListener('click', () => {
         return;
     }
 
-    statusText.innerText = "Running Stress Test...";
+    statusText.innerText = `Running ${currentProcessor} Stress Test...`;
     statusText.classList.remove('idle');
     statusText.classList.add('running');
 
@@ -111,7 +121,17 @@ startBtn.addEventListener('click', () => {
     warningMsg.classList.remove('show-warning');
 
     isEngineRunning = true; 
-    benchmarkWorker.postMessage({type: 'START', iterations: 20});
+    if (currentProcessor === 'CPU') {
+        benchmarkWorker.postMessage({type: 'START', iterations: 20});
+    }
+    else {
+        console.log("WebGPU Pipeline starting...");
+        setTimeout(() => {
+            if (isEngineRunning) {
+                gflopsDisplay.innerText = "GPU INCOMING...";
+            }
+        }, 500);
+    }
 });
 
 stopBtn.addEventListener('click', () => {
@@ -132,5 +152,74 @@ stopBtn.addEventListener('click', () => {
         statusText.innerText = 'Ready';
         statusText.classList.remove('running');
         statusText.classList.add('idle');
+    }
+});
+
+// Processor & GPU detection
+async function detectUserGPU() {
+
+    cpuWarnMsg.classList.add('hidden');
+
+    try {
+        if (navigator.gpu) {
+            const adapter = await navigator.gpu.requestAdapter();
+            if (adapter) {
+                const info = adapter.info;
+                const apiName = info.architecture || info.vendor || 'WebGPU';
+
+                optGPU.innerText = `GPU (${apiName})`;
+                showGpuFallbackMsg = false;
+                gpuWarnMsg.classList.add('hidden');
+                return;
+            }
+        }
+        
+        
+        const canvas = document.createElement('canvas');
+        const glContext = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+        if (glContext) {
+            const debugInfo = glContext.getExtension('WEBGL_debug_renderer_info');
+            const rendererName = debugInfo ? glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'WebGL';
+
+            optGPU.innerText = `GPU (WebGL)`;
+            gpuWarnMsg.innerText = `WebGL Active: ${rendererName}`;
+            showGpuFallbackMsg = true;
+            gpuWarnMsg.classList.remove('hidden');
+            return;
+        }
+
+        optGPU.innerText = "GPU";
+        gpuWarnMsg.innerText = "Graphics hardware unsupported";
+        showGpuFallbackMsg = true;
+        gpuWarnMsg.classList.remove('hidden');
+    } catch (error) {
+        console.error("GPU detection failed", error);
+        optGPU.innerText = "GPU";
+        gpuWarnMsg.innerText = "GPU detection failed.";
+        showGpuFallbackMsg = true;
+        gpuWarnMsg.classList.remove('hidden');
+    }
+}
+
+detectUserGPU();
+
+processorSelect.addEventListener('change', (event) => {
+    if (isEngineRunning) {
+        event.target.value = currentProcessor;
+        return;
+    }
+
+    currentProcessor = event.target.value;
+    
+    if (currentProcessor === "CPU") {
+        cpuWarnMsg.classList.remove('hidden');
+        gpuWarnMsg.classList.add('hidden');
+    }
+    else {
+        cpuWarnMsg.classList.add('hidden');
+        if (showGpuFallbackMsg) {
+            gpuWarnMsg.classList.remove('hidden');
+        }
     }
 });

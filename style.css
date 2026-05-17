@@ -172,6 +172,7 @@ body.light-mode {
     
     animation: gradient-shift 12s ease infinite; 
     padding-bottom: 5px;
+    /* To Do */
     filter: drop-shadow(0 0 10px rgba(255, 60, 80, 0.4));
 }
 
@@ -446,7 +447,65 @@ body.light-mode {
     border: 1px solid var(--danger) !important;
 }
 
-/* Settings Modal Fixed */
+.hardware-dd-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-top: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.dd-label {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#processor-select {
+    background-color: var(--panel-bg);
+    color: var(--accent);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    outline: none;
+
+    /* remove default DD UI */
+    appearance: none;
+    -webkit-appearance: none;
+
+    /* custom UI */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ffcc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+    transition: --border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#processor-select:hover, #processor-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.598);
+}
+
+#processor-select option {
+    background-color: var(--panel-bg);
+    color: var(--text-main);
+}
+
+.hidden {
+    display: none !important;
+}
+/* Settings Modal */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background-color: rgba(0, 0, 0, 0.6);
