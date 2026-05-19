@@ -1,3 +1,5 @@
+import { runWebGPUStage } from "./gpu-engine";
+
 // Grab elements from DOM
 const startBtn = document.getElementById('start-btn');
 const stopBtn = document.getElementById('stop-btn');
@@ -106,8 +108,15 @@ benchmarkWorker.onerror = function(error) {
 
 // --Engine Controls--
 startBtn.addEventListener('click', () => {
-    if (!isEngineReady) {
-        warningMsg.innerText = "Error: Engine not compiled yet!";
+    if (currentProcessor === 'CPU' && !isEngineReady) {
+        warningMsg.innerText = "Error: CPU Engine not compiled yet!";
+        warningMsg.classList.add('show-warning');
+        setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
+        return;
+    }
+
+    if (currentProcessor === 'GPU' && !navigator.gpu) {
+        warningMsg.innerText = "Error: WebGPU not supported on this device falling back to WebGL!";
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
         return;
@@ -126,11 +135,43 @@ startBtn.addEventListener('click', () => {
     }
     else {
         console.log("WebGPU Pipeline starting...");
-        setTimeout(() => {
-            if (isEngineRunning) {
-                gflopsDisplay.innerText = "GPU INCOMING...";
+        gflopsDisplay.innerText = "Warming up GPU...";
+
+        (async () => {
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (!adapter) throw new Error("No adapter found");
+                const device = await adapter.requestDevice();
+
+                gflopsDisplay.innerText = "Running Operations...";
+                const resultGflops = await runWebGPUStage(device, 4096, 50);
+
+                if (isEngineRunning) {
+                    let displaySpeed = "";
+                    if (resultGflops >= 1000) {
+                        displaySpeed = `${(resultGflops / 1000).toFixed(2)} TFLOPS`;
+                    }
+                    else {
+                        displaySpeed = `${resultGflops.toFixed(2)} GFLOPS`;
+                    }
+                    gflopsDisplay.innerText = displaySpeed;
+
+                    statusText.innerText = 'Completed';
+                    statusText.classList.remove('running');
+                    statusText.classList.add('idle');
+                    stopBtn.classList.add('is-disabled');
+                    isEngineRunning = false;
+                }
             }
-        }, 500);
+            catch (error) {
+                console.error("GPU Test Failed! Error: ", error);
+                if (isEngineRunning) {
+                    warningMsg.innerText = "GPU Execution Failed!";
+                    warningMsg.classList.add('show-warning');
+                    stopBtn.click();
+                }
+            }
+        })();
     }
 });
 
@@ -142,17 +183,22 @@ stopBtn.addEventListener('click', () => {
         setTimeout(() => stopBtn.classList.remove('vibrate-active'), 300);
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 2500);
+        return;
+    }
+    isEngineRunning = false;
+
+    if (currentProcessor === 'CPU') {
+        benchmarkWorker.postMessage({type: 'STOP'});
     }
     else {
-        isEngineRunning = false;
-
-        benchmarkWorker.postMessage({type: 'STOP'});
-
-        stopBtn.classList.add('is-disabled');
-        statusText.innerText = 'Ready';
-        statusText.classList.remove('running');
-        statusText.classList.add('idle');
+        gflopsDisplay.innerText = "GPU Test Aborted";
     }
+
+
+    stopBtn.classList.add('is-disabled');
+    statusText.innerText = 'Ready';
+    statusText.classList.remove('running');
+    statusText.classList.add('idle');
 });
 
 // Processor & GPU detection
