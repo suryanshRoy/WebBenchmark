@@ -25,7 +25,7 @@ const cpuWarnMsg = document.getElementById('cpu-warning-msg');
 
 let currentProcessor = 'GPU';
 let showGpuFallbackMsg = true;
-
+let activeGPUDevice = null; // os oom killswitch
 
 function toggleSidebar() {
     sidebar.classList.toggle('closed');
@@ -75,13 +75,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 800);
 });
 
+function plotPerformanceCurve(dataPoints) {
+    const canvas = document.getElementById('heatmap-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
 
-// --WEBASSEMBLY ENGINE--
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight || 250;
 
-const MATRIX_SIZE = 512; // For Medium test
-const FLOP_PER_ITERATION = 2* Math.pow(MATRIX_SIZE, 3); 
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-// --WASM Worker Setup--
+    const placeholder = canvas.parentElement.querySelector('.placeholder-text');
+    if (placeholder) placeholder.style.display = 'none';
+    if (dataPoints.length < 2) return;
+
+    const maxGflops = Math.max(...dataPoints.map(d => d.gflops));
+
+    const padding = {top: 35, right: 20, bottom: 30, left: 50};
+    const graphWidth = canvas.width - padding.left - padding.right;
+    const graphHeight = canvas.height - padding.top - padding.bottom;
+
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.moveTo(padding.left, padding.top);
+    ctx.lineTo(padding.left, canvas.height - padding.bottom);
+    ctx.lineTo(canvas.width - padding.right, canvas.height -padding.bottom);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(95, 255, 105, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+
+    dataPoints.forEach((point, index) => {
+        const x = padding.left + (index / (dataPoints.length - 1)) * graphWidth;
+        const heightRatio = point.gflops / (maxGflops || 1);
+        const y = padding.top + graphHeight - (heightRatio * graphHeight);
+
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    dataPoints.forEach((point, index) => {
+        const x = padding.left + (index / (dataPoints.length - 1)) * graphWidth;
+        const heightRatio = point.gflops / (maxGflops || 1);
+        const y = padding.top + graphHeight - (heightRatio * graphHeight);
+
+        ctx.fillStyle = 'rgba(255, 49, 49, 0.82)';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(150, 150, 150, 0.9)';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`M:${point.matrix}`, x, canvas.height - padding.bottom + 15);
+        ctx.fillStyle = 'rgba(62, 50, 146, 0.9)';
+        ctx.fillText(`${point.gflops.toFixed(0)} GF`, x, y - 10);
+    });
+
+    ctx.fillStyle = 'rgba(150, 150, 150, 0.6)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${maxGflops.toFixed(0)}`, padding.left - 8, padding.top);
+    ctx.fillText(`${(maxGflops / 2).toFixed(0)}`, padding.left - 8, padding.top + (graphHeight / 2));
+    ctx.fillText(`0`, padding.left - 8, padding.top + graphHeight);
+
+    ctx.fillStyle = 'rgba(95, 255, 105, 0.9)';
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const peakText = maxGflops >= 1000 
+        ? `Peak: ${(maxGflops/1000).toFixed(2)} TFLOPS` 
+        : `Peak: ${maxGflops.toFixed(1)} GFLOPS`;
+    ctx.fillText(peakText, padding.left, 5);
+}
 
 const gflopsDisplay = document.getElementById('gflops-current');
 let isEngineRunning = false;
@@ -142,17 +212,39 @@ startBtn.addEventListener('click', () => {
                 const adapter = await navigator.gpu.requestAdapter();
                 if (!adapter) throw new Error("No adapter found");
                 const device = await adapter.requestDevice();
+                activeGPUDevice = device;
+                
+                const matrixSizes = [256, 512, 1024, 2048, 4096];
+                let performanceData = [];
+                let bestGflops = 0;
+                
+                for (let size of matrixSizes) {
+                    if (!isEngineRunning) break;
+                    
+                    gflopsDisplay.innerText = `Testing ${size}x${size}...`;
+                    
+                    const resultGflops = await runWebGPUStage(device, size, 50, () => isEngineRunning);
+                    
+                    if (!isEngineRunning || resultGflops.gflops === 0) break;
+                    
+                    const currentGflops = resultGflops.gflops;
+                    if (currentGflops > bestGflops) bestGflops = currentGflops;
+                    
+                    performanceData.push({matrix: size, gflops: currentGflops});
+                    plotPerformanceCurve(performanceData);
 
-                gflopsDisplay.innerText = "Running Operations...";
-                const resultGflops = await runWebGPUStage(device, 4096, 50);
+                    if (resultGflops.timeTakenSec > 1.5){
+                        console.warn(`Matrix ${size} took ${resultGflops.timeTakenSec.toFixed(2)}s. Stopping to prevent crash.`);
+                        break;
+                    }
+                }
 
                 if (isEngineRunning) {
                     let displaySpeed = "";
-                    if (resultGflops >= 1000) {
-                        displaySpeed = `${(resultGflops / 1000).toFixed(2)} TFLOPS`;
-                    }
-                    else {
-                        displaySpeed = `${resultGflops.toFixed(2)} GFLOPS`;
+                    if (bestGflops >= 1000) {
+                        displaySpeed = `${(bestGflops / 1000).toFixed(2)} TFLOPS`;
+                    } else {
+                        displaySpeed = `${bestGflops.toFixed(2)} GFLOPS`;
                     }
                     gflopsDisplay.innerText = displaySpeed;
 
@@ -186,6 +278,12 @@ stopBtn.addEventListener('click', () => {
         return;
     }
     isEngineRunning = false;
+
+    if (activeGPUDevice) {
+        activeGPUDevice.destroy();
+        activeGPUDevice = null;
+        console.log('GPU forcefully terminated due to stop request.');
+    }
 
     if (currentProcessor === 'CPU') {
         benchmarkWorker.postMessage({type: 'STOP'});

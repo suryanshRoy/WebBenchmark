@@ -40,6 +40,6 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>,
     }
 
     if (row < size && col < size) {
-        matrixC[row * size + col] = sum;
+        matrixC[row * size + col] = matrixC[row * size + col] + sum;
     }
 }
