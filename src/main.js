@@ -1,6 +1,6 @@
 import { runWebGPUStage } from "./gpu-engine";
 
-// Grab elements from DOM
+// Get btn and warning elements
 const startBtn = document.getElementById('start-btn');
 const stopBtn = document.getElementById('stop-btn');
 const statusText = document.getElementById('status-text');
@@ -11,7 +11,7 @@ const menuBtn = document.getElementById('menu-btn');
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 
-// UI elements
+// UI elements to change appearance
 const settingsOpenBtn = document.getElementById('settings-open-btn');
 const settingsCloseBtn = document.getElementById('settings-close-btn');
 const settingsModal = document.getElementById('settings-modal');
@@ -26,6 +26,7 @@ const cpuWarnMsg = document.getElementById('cpu-warning-msg');
 let currentProcessor = 'GPU';
 let showGpuFallbackMsg = true;
 let activeGPUDevice = null; // os oom killswitch
+let currentGraphData = [];
 
 function toggleSidebar() {
     sidebar.classList.toggle('closed');
@@ -61,22 +62,38 @@ themeToggleBtn.addEventListener('click', () => {
 
     if (document.body.classList.contains('light-mode')) {
         themeToggleBtn.innerText = "Switch to Dark Mode";
+        localStorage.setItem('benchmark_appearance', 'light');
     } 
     else {
         themeToggleBtn.innerText = "Switch to Light Mode";
+        localStorage.setItem("benchmark_appearance", "dark");
+    }
+
+    if (currentGraphData.length > 0) {
+        plotPerformanceCurve(currentGraphData);
     }
 });
 
 // for UI pop
 document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem("benchmark_appearance");
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        themeToggleBtn.innerText = 'Switch to Dark Mode'
+    }
+    else {
+        themeToggleBtn.innerText = "Switch to Light Mode"
+    }
+
     setTimeout(() => {
         const cores = navigator.hardwareConcurrency || 'Unknown';
         document.getElementById('core-count').innerText = `${cores} Threads Available`;
     }, 800);
 });
 
-function plotPerformanceCurve(dataPoints) {
-    const canvas = document.getElementById('heatmap-canvas');
+// FLOP Graph
+function plotPerformanceCurve(performanceData) {
+    const canvas = document.getElementById('gflops-canvas'); 
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
@@ -87,63 +104,91 @@ function plotPerformanceCurve(dataPoints) {
 
     const placeholder = canvas.parentElement.querySelector('.placeholder-text');
     if (placeholder) placeholder.style.display = 'none';
-    if (dataPoints.length < 2) return;
+    if (performanceData.length < 2) return;
 
-    const maxGflops = Math.max(...dataPoints.map(d => d.gflops));
+    const maxGflops = Math.max(...performanceData.map(d => d.gflops), 1);
 
     const padding = {top: 35, right: 20, bottom: 30, left: 50};
     const graphWidth = canvas.width - padding.left - padding.right;
     const graphHeight = canvas.height - padding.top - padding.bottom;
+    const bottomY = canvas.height - padding.bottom;
+
+    // TODO: Change theme color of appearance of graph
+    const isLightMode = document.body.classList.contains('light-mode');
+    const axisColor = isLightMode ? 'rgb(0, 25, 12)' : 'rgba(255, 255, 255, 0.2)';
+    const gridTextColor = isLightMode ? 'rgba(30, 35, 40, 0.8)' : 'rgba(200, 200, 200, 0.8)';
+    const scaleTextColor = isLightMode ? 'rgb(0, 25, 12)' : 'rgba(150, 150, 150, 0.6)';
+    const peakTextColor = isLightMode ? 'rgba(0, 140, 110, 0.8)' : 'rgba(98, 242, 108, 0.87)';
+    const nodeTextColor = isLightMode ? 'rgba(0, 140, 114, 0.85)' : 'rgb(0, 201, 205)';
+    const lineColor = isLightMode ? 'rgba(18, 210, 175, 0.84)' : 'rgba(0, 255, 204, 0.86)';
+    const gradientStart = isLightMode ? 'rgba(37, 207, 165, 0.66)' : 'rgba(0, 255, 204, 0.29)';
+    const gradientEnd = isLightMode ? 'rgba(142, 182, 223, 0.68)' : 'rgba(0, 72, 92, 0.09)';
 
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.strokeStyle = axisColor;
     ctx.lineWidth = 1;
     ctx.moveTo(padding.left, padding.top);
-    ctx.lineTo(padding.left, canvas.height - padding.bottom);
-    ctx.lineTo(canvas.width - padding.right, canvas.height -padding.bottom);
+    ctx.lineTo(padding.left, bottomY);
+    ctx.lineTo(canvas.width - padding.right, bottomY);
     ctx.stroke();
+    
+    let coords = [];
+    performanceData.forEach((point, index) => {
+        const x = padding.left + (index / (performanceData.length - 1)) * graphWidth;
+        const heightRatio = point.gflops / maxGflops;
+        const y = bottomY - (heightRatio * graphHeight);
+        coords.push({x, y});
+    });
 
+    // Draw line of GFLOPS
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(95, 255, 105, 0.7)';
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
-
-    dataPoints.forEach((point, index) => {
-        const x = padding.left + (index / (dataPoints.length - 1)) * graphWidth;
-        const heightRatio = point.gflops / (maxGflops || 1);
-        const y = padding.top + graphHeight - (heightRatio * graphHeight);
-
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x,y);
-    });
+    ctx.moveTo(coords[0].x, coords[0].y);
+    for (let i = 1; i < coords.length; i++) {
+        ctx.lineTo(coords[i].x, coords[i].y);
+    }
     ctx.stroke();
 
-    dataPoints.forEach((point, index) => {
-        const x = padding.left + (index / (dataPoints.length - 1)) * graphWidth;
-        const heightRatio = point.gflops / (maxGflops || 1);
-        const y = padding.top + graphHeight - (heightRatio * graphHeight);
+    ctx.lineTo(coords[coords.length - 1].x, bottomY);
+    ctx.lineTo(coords[0].x, bottomY);
+    ctx.closePath();
+
+    const gradient = ctx.createLinearGradient(0, padding.top, 0, bottomY);
+    gradient.addColorStop(0, gradientStart);
+    gradient.addColorStop(1, gradientEnd);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    coords.forEach((coord, index) => {
+        // Display points on Graph
+        const point = performanceData[index];
 
         ctx.fillStyle = 'rgba(255, 49, 49, 0.82)';
         ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.arc(coord.x, coord.y, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = 'rgba(150, 150, 150, 0.9)';
+        // label grids on graph
+        ctx.fillStyle = gridTextColor;
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`M:${point.matrix}`, x, canvas.height - padding.bottom + 15);
-        ctx.fillStyle = 'rgba(62, 50, 146, 0.9)';
-        ctx.fillText(`${point.gflops.toFixed(0)} GF`, x, y - 10);
+        ctx.fillText(`M:${point.matrix}`, coord.x, bottomY + 15);
+        
+        ctx.fillStyle = nodeTextColor;
+        ctx.fillText(`${point.gflops.toFixed(0)} GF`, coord.x, coord.y - 10);
     });
 
-    ctx.fillStyle = 'rgba(150, 150, 150, 0.6)';
+    // Y-axis limits
+    ctx.fillStyle = scaleTextColor;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillText(`${maxGflops.toFixed(0)}`, padding.left - 8, padding.top);
     ctx.fillText(`${(maxGflops / 2).toFixed(0)}`, padding.left - 8, padding.top + (graphHeight / 2));
-    ctx.fillText(`0`, padding.left - 8, padding.top + graphHeight);
+    ctx.fillText(`0`, padding.left - 8, bottomY);
 
-    ctx.fillStyle = 'rgba(95, 255, 105, 0.9)';
+    ctx.fillStyle = peakTextColor;
     ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
@@ -176,17 +221,17 @@ benchmarkWorker.onerror = function(error) {
     console.error("Worker error: ", error);
 }
 
-// --Engine Controls--
+// --Start Button Control!!!--
 startBtn.addEventListener('click', () => {
     if (currentProcessor === 'CPU' && !isEngineReady) {
-        warningMsg.innerText = "Error: CPU Engine not compiled yet!";
+        warningMsg.innerText = "Error: CPU WASM not compiled yet!";
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
         return;
     }
 
     if (currentProcessor === 'GPU' && !navigator.gpu) {
-        warningMsg.innerText = "Error: WebGPU not supported on this device falling back to WebGL!";
+        warningMsg.innerText = "Error: WebGPU not supported on this device falling back to use WebGL if possible!";
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
         return;
@@ -231,6 +276,7 @@ startBtn.addEventListener('click', () => {
                     if (currentGflops > bestGflops) bestGflops = currentGflops;
                     
                     performanceData.push({matrix: size, gflops: currentGflops});
+                    currentGraphData = performanceData;
                     plotPerformanceCurve(performanceData);
 
                     if (resultGflops.timeTakenSec > 1.5){

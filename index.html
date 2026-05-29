@@ -41,7 +41,7 @@
                 <section class="test-selector-panel">
                     <h3>Select Benchmarks</h3>
                     <div class="test-options">
-                        <label class="test-checkbox"><input type="checkbox" checked> CPU Matrix Heatmap</label>
+                        <label class="test-checkbox"><input type="checkbox" checked> CPU Matrix Graph</label>
                         <label class="test-checkbox"><input type="checkbox" disabled> Memory Bandwidth <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
                         <label class="test-checkbox"><input type="checkbox" disabled> SIMD Compute <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
                         <label class="test-checkbox"><input type="checkbox" disabled> AI Background Load <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
@@ -49,7 +49,7 @@
                     </div>
                 </section>
                 
-                <!-- Mark AI Chat Panel -->
+                <!-- Mark AI chat panel -->
                 <section class="ai-chat-panel">
                     <input type="text" class="ai-chat-input" placeholder="Ask Mark AI about your system performance...">
                     <button class="ai-chat-send-btn" title="Send to Mark AI">
@@ -98,7 +98,7 @@
                         </div>
                         <div class="graphs-grid">
                             <div class="canvas-container">
-                                <canvas id="heatmap-canvas"></canvas>
+                                <canvas id="gflops-canvas"></canvas>
                                 <div class="placeholder-text">Awaiting CPU Matrix...</div>
                             </div>
                             <div class="canvas-container blank-graph">
