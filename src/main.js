@@ -113,7 +113,6 @@ function plotPerformanceCurve(performanceData) {
     const graphHeight = canvas.height - padding.top - padding.bottom;
     const bottomY = canvas.height - padding.bottom;
 
-    // TODO: Change theme color of appearance of graph
     const isLightMode = document.body.classList.contains('light-mode');
     const axisColor = isLightMode ? 'rgb(0, 25, 12)' : 'rgba(255, 255, 255, 0.2)';
     const gridTextColor = isLightMode ? 'rgba(30, 35, 40, 0.8)' : 'rgba(200, 200, 200, 0.8)';
@@ -197,6 +196,15 @@ function plotPerformanceCurve(performanceData) {
         : `Peak: ${maxGflops.toFixed(1)} GFLOPS`;
     ctx.fillText(peakText, padding.left, 5);
 }
+// REVIEW: Fixed for current, need to keep an eye if graph get distorted again
+const graphContainer = document.querySelector('.canvas-container');
+if(graphContainer) {
+    new ResizeObserver(() => {
+        if (currentGraphData.length > 0){
+            plotPerformanceCurve(currentGraphData);
+        }
+    }).observe(graphContainer);
+}
 
 const gflopsDisplay = document.getElementById('gflops-current');
 let isEngineRunning = false;
@@ -221,7 +229,7 @@ benchmarkWorker.onerror = function(error) {
     console.error("Worker error: ", error);
 }
 
-// --Start Button Control!!!--
+// Start Button Control!!!
 startBtn.addEventListener('click', () => {
     if (currentProcessor === 'CPU' && !isEngineReady) {
         warningMsg.innerText = "Error: CPU WASM not compiled yet!";

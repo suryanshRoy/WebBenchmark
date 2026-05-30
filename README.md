@@ -15,6 +15,6 @@
 
 > [!NOTE]
 > If a device is failing to run the Benchmark test or getting very bad output, then it points either two of the issue. 
-> 1. The browser or device may have very high security that is interfering with the run. 
-   > > Fix: try running it on Chrome browser or may try to enable the WebGPU extension if WebGPU is failing.
+> 1. The browser or device may have very high security that is interfering with the run. <br>
+> * Fix: try running it on Chrome browser or may try to enable the WebGPU extension if WebGPU is failing.
 > 2. The device is already running some high computational background task, that may be taking some of the resources that is required by the WebBenchmark to run correctly.  
