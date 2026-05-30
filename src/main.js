@@ -85,6 +85,21 @@ document.addEventListener('DOMContentLoaded', () => {
         themeToggleBtn.innerText = "Switch to Light Mode"
     }
 
+    const savedIters = localStorage.getItem("benchmark_iters");
+    if (savedIters) {
+        iterInput.value = savedIters;
+    }
+    // savedPrecision defined before cause it gets overwrite by simd
+    const savedPrecision = localStorage.getItem("benchmark_precision");
+    const savedSimd = localStorage.getItem("benchmark_simd") === "true";
+    simdCheckbox.checked = savedSimd;
+    simdCheckbox.dispatchEvent(new Event('change'));
+
+    if (savedPrecision) {
+        computeType.value = savedPrecision;
+        localStorage.setItem("benchmark_precision", savedPrecision);
+    }
+
     setTimeout(() => {
         const cores = navigator.hardwareConcurrency || 'Unknown';
         document.getElementById('core-count').innerText = `${cores} Threads Available`;
@@ -196,6 +211,59 @@ function plotPerformanceCurve(performanceData) {
         : `Peak: ${maxGflops.toFixed(1)} GFLOPS`;
     ctx.fillText(peakText, padding.left, 5);
 }
+
+const simdCheckbox = document.getElementById('simd-checkbox');
+const computeType = document.getElementById('compute-type');
+const iterInput = document.getElementById("iter-input");
+
+simdCheckbox.addEventListener('change', (e)=> {
+    computeType.innerHTML = '';
+    if (e.target.checked) {
+        computeType.add(new Option('Float4 (32-bit)', 'f4-vec-f32'));
+        computeType.add(new Option('Float4 (16-bit)', 'f4-vec-f16'));
+    }
+    else {
+        computeType.add(new Option('F32 Scalar', "f32-scalar"));
+        computeType.add(new Option("F16 Scalar", 'f16-scalar'));
+    }
+    localStorage.setItem('benchmark_simd', e.target.checked);
+    localStorage.setItem('benchmark_precision', computeType.value);
+});
+
+computeType.addEventListener('change', (e) => {
+    localStorage.setItem('benchmark_precision', e.target.value);
+});
+
+iterInput.addEventListener('change', (e) => {
+    let val = parseInt(e.target.value);
+    if (isNaN(val) || val <= 0){
+        e.target.value = 1;
+    }
+    else if (val >= 100){
+        e.target.value = 99;
+    }
+    localStorage.setItem('benchmark_iters', e.target.value);
+});
+
+const iterUp = document.getElementById("iter-up");
+const iterDown = document.getElementById("iter-down");
+
+iterUp.addEventListener("click", () =>{
+    let val = parseInt(iterInput.value) || 1;
+    if (val < 99) {
+        iterInput.value = val + 1;
+        iterInput.dispatchEvent(new Event('change'));
+    }
+});
+
+iterDown.addEventListener('click', () => {
+    let val = parseInt(iterInput.value) || 1;
+    if (val > 1) {
+        iterInput.value = val - 1;
+        iterInput.dispatchEvent(new Event("change"));
+    }
+});
+
 // REVIEW: Fixed for current, need to keep an eye if graph get distorted again
 const graphContainer = document.querySelector('.canvas-container');
 if(graphContainer) {

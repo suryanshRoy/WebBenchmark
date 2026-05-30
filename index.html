@@ -41,16 +41,36 @@
 
             <div class="container">
                 <section class="test-selector-panel">
-                    <h3>Select Benchmarks</h3>
+                    <h3>Benchmark Settings</h3>
                     <div class="test-options">
+                        <label class="test-checkbox"><input type="checkbox" id="simd-checkbox">SIMD Compute</label>
+                        <div class="benchmark-configs"></div>
+                        <div class="hardware-dd-container" style="margin-top: 0;">
+                            <label for="iter-input" class="dd-label">Iterations:</label>
+                            <input type="number" id="iter-input" min="1" max="99" value="20">
+                            <div class="iter-arrow">
+                                <svg id="iter-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="18 15 12 9 6 15"></polyline>
+                                </svg>
+                                <svg id="iter-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="hardware-dd-container" style="margin-top: 0;">
+                            <label for="compute-type" class="dd-label">Precision:</label>
+                            <select id="compute-type">
+                                <option value="f32-scalar">F32 Scalar</option>
+                                <option value="f16-scalar">F16 Scalar</option>
+                            </select>
+                        </div>
                         <label class="test-checkbox"><input type="checkbox" checked> CPU Matrix Graph</label>
                         <label class="test-checkbox"><input type="checkbox" disabled> Memory Bandwidth <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
-                        <label class="test-checkbox"><input type="checkbox" disabled> SIMD Compute <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
-                        <label class="test-checkbox"><input type="checkbox" disabled> AI Load <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
+                        <label class="test-checkbox"><input type="checkbox" disabled> AI Running test <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
                     </div>
                 </section>
                 
-                <!-- Mark AI chat panel -->
+                <!-- chat panel -->
                 <section class="ai-chat-panel">
                     <input type="text" class="ai-chat-input" placeholder="Ask Mark AI about your system performance...">
                     <button class="ai-chat-send-btn" title="Send to Mark AI">
@@ -83,7 +103,7 @@
                                 <label for="processor-select" class="dd-label">Processor:</label>
                                 <select id="processor-select" class="btn-label">
                                     <option value="GPU" id="opt-GPU">GPU (Detecting...)</option>
-                                    <option value="CPU" id="opt-cpu">CPU (Experimental)</option>
+                                    <option value="CPU" id="opt-cpu">CPU</option>
                                 </select>
                             </div>
                             <p id="gpu-warning-msg" class="info-message">Analyzing Graphics API...</p>

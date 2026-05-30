@@ -219,6 +219,15 @@ body.light-mode {
     cursor: not-allowed; opacity: 0.5; 
 }
 
+.benchmark-configs {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding-top:  1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
 /* --- Mark AI Chat Panel --- */
 .ai-chat-panel {
     position: relative;
@@ -478,7 +487,7 @@ body.light-mode .dd-label {
     letter-spacing: 1px;
 }
 
-#processor-select {
+#processor-select, #compute-type, #iter-input {
     background-color: var(--panel-bg);
     color: var(--accent);
     border: 1px solid var(--border-color);
@@ -495,7 +504,6 @@ body.light-mode .dd-label {
     -webkit-appearance: none;
 
     /* custom UI */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ffcc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.7rem center;
     background-size: 1rem;
@@ -503,12 +511,53 @@ body.light-mode .dd-label {
     transition: --border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-#processor-select:hover, #processor-select:focus {
+#processor-select:hover, #processor-select:focus,
+#compute-type:hover, #compute-type:focus, 
+#iter-input:hover #iter-input:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.598);
 }
 
-#processor-select option {
+#processor-select, #compute-type {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ffcc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+#iter-input {
+    appearance: textfield; 
+}
+#iter-input::-webkit-inner-spin-button,
+#iter-input::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+#iter-input {
+    background-image: none;
+    padding-right: 2rem; 
+}
+
+.custom-number-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.iter-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.iter-arrow svg {
+    width: 14px;
+    height: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+.iter-arrow svg:hover {
+    color: rgba(32, 127, 243, 0.7)
+}
+
+#processor-select option, #compute-type option {
     background-color: var(--panel-bg);
     color: var(--text-main);
 }
