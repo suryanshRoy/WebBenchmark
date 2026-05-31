@@ -341,6 +341,18 @@ function runCPUMatrix(size, iterations, precision) {
     });
 }
 
+function toggleUILock(isLocked){
+    iterInput.disabled = isLocked;
+    computeType.disabled = isLocked;
+    processorSelect.disabled = isLocked;
+    simdCheckbox.disabled = isLocked;
+    const iterArrows = document.querySelector('.iter-arrow');
+    if (iterArrows) {
+        iterArrows.style.pointerEvents = isLocked ? 'none' : 'auto';
+        iterArrows.style.opacity = isLocked ? '0.5' : '1';
+    }
+}
+
 // Start Button Control!!!
 startBtn.addEventListener('click', () => {
     if (currentProcessor === 'CPU' && !isEngineReady) {
@@ -368,6 +380,7 @@ startBtn.addEventListener('click', () => {
     const userPrecision = computeType.value;
 
     isEngineRunning = true; 
+    toggleUILock(true);
     if (currentProcessor === 'CPU') {
         console.log("WASM CPU starting up...");
         gflopsDisplay.innerText = "Waking up CPU...";
@@ -415,6 +428,7 @@ startBtn.addEventListener('click', () => {
                     statusText.classList.add('idle');
                     stopBtn.classList.add("is-disabled");
                     isEngineRunning = false;
+                    toggleUILock(false);
                 }
             }
             catch (error) {
@@ -485,6 +499,7 @@ startBtn.addEventListener('click', () => {
                     statusText.classList.add('idle');
                     stopBtn.classList.add('is-disabled');
                     isEngineRunning = false;
+                    toggleUILock(false);
                 }
             }
             catch (error) {
@@ -510,6 +525,7 @@ stopBtn.addEventListener('click', () => {
         return;
     }
     isEngineRunning = false;
+    toggleUILock(false);
 
     if (activeGPUDevice) {
         activeGPUDevice.destroy();
