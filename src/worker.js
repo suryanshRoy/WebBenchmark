@@ -27,12 +27,12 @@ createEngine({
 });
 
 // Infinite loop for CPU thermal throttling 
-function runBenchmarkLoop(iterations) {
+function runBenchmarkLoop(iterations, precisionType = 0) {
     if (!isEngineRunning || !engineInstance) return;
 
     const startTime = performance.now();
     
-    engineInstance._run_stress_test(iterations);
+    engineInstance._run_stress_test(iterations, precisionType);
 
     const endTime = performance.now();
     const timeTakenSeconds = (endTime-startTime) / 1000;
@@ -45,7 +45,7 @@ function runBenchmarkLoop(iterations) {
     });
 
     if (isEngineRunning) {
-        setTimeout(() => runBenchmarkLoop(iterations), 0);
+        setTimeout(() => runBenchmarkLoop(iterations, precisionType), 0);
     }
 }
 
@@ -54,7 +54,18 @@ self.onmessage = function(event) {
         isEngineRunning = true;
         // Reset mem to default
         engineInstance._init_memory(DEFAULT_MAT_SIZE);
-        runBenchmarkLoop(event.data.iterations);
+
+        let preciType = 0;
+        if (event.data.precision === "f64-scalar"){
+            preciType = 1;
+        }
+        else if (event.data.precision === 'f4-vec-f32') {
+            preciType = 2;
+        }
+        else if (event.data.precision === "f2-vec-f64") {
+            preciType = 3;
+        }
+        runBenchmarkLoop(event.data.iterations, preciType);
     }
     else if (event.data.type === "START_2") {
         if (!engineInstance) return;
@@ -62,11 +73,19 @@ self.onmessage = function(event) {
         const matrixSize = event.data.matrix;
         const iterations = event.data.iterations;
         const precision = event.data.precision;
+        let pType = 0;
+        if (precision === "f64-scalar") pType = 1;
+        else if (precision === 'f4-vec-f32'){
+            pType = 2;
+        }
+        else if (precision === "f2-vec-f64") {
+            pType = 3;
+        }
 
         engineInstance._init_memory(matrixSize); // reallocate c++ mem
 
         const startTime = performance.now();
-        engineInstance._run_stress_test(iterations);
+        engineInstance._run_stress_test(iterations, pType);
         const end_time = performance.now();
 
         const timeTakenSec = (end_time - startTime) /1000;

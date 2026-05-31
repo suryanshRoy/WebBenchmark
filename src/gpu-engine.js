@@ -1,8 +1,9 @@
 import matrixMultiplyWGSL from './compute.wgsl?raw'
 
-export async function runWebGPUStage(device, matrixSize, iterations, isRunningFn) {
+export async function runWebGPUStage(device, matrixSize, iterations, precision, isRunningFn) {
     const totalElements = matrixSize * matrixSize;
-    const byteSize = totalElements * 4; // 4 bytes for f32
+    const isF16 = precision.includes('f16')
+    const byteSize = totalElements * (isF16?  2:4); 
 
     const bufferA = device.createBuffer({size: byteSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
     const bufferB = device.createBuffer({size: byteSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
@@ -10,15 +11,28 @@ export async function runWebGPUStage(device, matrixSize, iterations, isRunningFn
     
     const uniformBuffer = device.createBuffer({size: 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST});
 
-    const dataA = new Float32Array(totalElements).fill(1.0);
-    const dataB = new Float32Array(totalElements).fill(2.0);
+    let dataA, dataB;
+    if (isF16){
+        dataA = new Uint16Array(totalElements).fill(0x3C00);
+        dataB = new Uint16Array(totalElements).fill(0x4000);
+    }
+    else {
+        dataA = new Float32Array(totalElements).fill(1.0);
+        dataB = new Float32Array(totalElements).fill(2.0);
+    }
+
     const uniformData = new Uint32Array([matrixSize]);
 
     device.queue.writeBuffer(bufferA, 0, dataA);
     device.queue.writeBuffer(bufferB, 0, dataB);
     device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 
-    const shaderMode = device.createShaderModule({code: matrixMultiplyWGSL});
+    let shaderCode = matrixMultiplyWGSL;
+    if (isF16) {
+        shaderCode = 'enable f16;\n' + shaderCode.replaceAll("f32", "f16");
+    }
+
+    const shaderMode = device.createShaderModule({code: shaderCode});
 
     const computePipeline = await device.createComputePipelineAsync({
         layout: 'auto',
@@ -83,7 +97,7 @@ export async function runWebGPUStage(device, matrixSize, iterations, isRunningFn
     if (remainingIters > 0) {
         const mainEncoder = device.createCommandEncoder();
         
-        // OPEN PASS ONCE
+        // open the pass once only
         const mainPass = mainEncoder.beginComputePass();
         mainPass.setPipeline(computePipeline);
         mainPass.setBindGroup(0, bindGroup);

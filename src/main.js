@@ -33,6 +33,41 @@ function toggleSidebar() {
     sidebarOverlay.classList.toggle('active');
 }
 
+function updatePreciOption() {
+    computeType.innerHTML = '';
+    const isSIMD = simdCheckbox.checked;
+    const isCPU = processorSelect.value === "CPU";
+
+    if (isSIMD) {
+        computeType.add(new Option('Float4 (32-bit)', 'f4-vec-f32'));
+
+        if (isCPU) {
+            computeType.add(new Option('Float2 (64-bit)', 'f2-vec-f64')); 
+        } else {
+            computeType.add(new Option('Float4 (16-bit)', 'f4-vec-f16')); 
+        }
+    }
+    else {
+        computeType.add(new Option('F32 Scalar', "f32-scalar"));
+
+        if (isCPU) {
+            computeType.add(new Option('F64 Scalar', 'f64-scalar')); 
+        } else {
+            computeType.add(new Option('F16 Scalar', 'f16-scalar')); 
+        }
+    }
+    
+    const savedPrecision = localStorage.getItem('benchmark_precision');
+    let optionExists = Array.from(computeType.options).some(opt => opt.value === savedPrecision);
+    
+    if (optionExists) {
+        computeType.value = savedPrecision;
+    } else {
+        computeType.selectedIndex = 0;
+        localStorage.setItem('benchmark_precision', computeType.value);
+    }
+}
+
 menuBtn.addEventListener('click', toggleSidebar);
 
 sidebarOverlay.addEventListener('click', () => {
@@ -93,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedPrecision = localStorage.getItem("benchmark_precision");
     const savedSimd = localStorage.getItem("benchmark_simd") === "true";
     simdCheckbox.checked = savedSimd;
-    simdCheckbox.dispatchEvent(new Event('change'));
+    updatePreciOption();
 
     if (savedPrecision) {
         computeType.value = savedPrecision;
@@ -217,17 +252,8 @@ const computeType = document.getElementById('compute-type');
 const iterInput = document.getElementById("iter-input");
 
 simdCheckbox.addEventListener('change', (e)=> {
-    computeType.innerHTML = '';
-    if (e.target.checked) {
-        computeType.add(new Option('Float4 (32-bit)', 'f4-vec-f32'));
-        computeType.add(new Option('Float4 (16-bit)', 'f4-vec-f16'));
-    }
-    else {
-        computeType.add(new Option('F32 Scalar', "f32-scalar"));
-        computeType.add(new Option("F16 Scalar", 'f16-scalar'));
-    }
     localStorage.setItem('benchmark_simd', e.target.checked);
-    localStorage.setItem('benchmark_precision', computeType.value);
+    updatePreciOption();
 });
 
 computeType.addEventListener('change', (e) => {
@@ -338,6 +364,9 @@ startBtn.addEventListener('click', () => {
     stopBtn.classList.remove('is-disabled');
     warningMsg.classList.remove('show-warning');
 
+    const userIters = parseInt(iterInput.value) || 20;
+    const userPrecision = computeType.value;
+
     isEngineRunning = true; 
     if (currentProcessor === 'CPU') {
         console.log("WASM CPU starting up...");
@@ -348,9 +377,6 @@ startBtn.addEventListener('click', () => {
                 const matrixSize = [256, 512, 1024, 2048, 4096];
                 let performanceData = [];
                 let FinalGFLOPS = 0;
-
-                const userIters = parseInt(iterInput.value) || 20;
-                const userPrecision = computeType.value;
 
                 for(let size of matrixSize){
                     if (!isEngineRunning) break;
@@ -370,7 +396,7 @@ startBtn.addEventListener('click', () => {
 
                     // REVIEW: May require some changes
                     const nextEstimatedTime = result.timeTakenSec * 8.0;
-                    if (nextEstimatedTime > 3.0) {
+                    if (nextEstimatedTime > 6.0) {
                         console.warn(`Matrix ${size} took ${result.timeTakenSec.toFixed(2)}s. Next may take it's 8x time!`);
                         break;
                     }
@@ -411,7 +437,12 @@ startBtn.addEventListener('click', () => {
             try {
                 const adapter = await navigator.gpu.requestAdapter();
                 if (!adapter) throw new Error("No adapter found");
-                const device = await adapter.requestDevice();
+                // if the f16 adapter exist or not?
+                const requiredFeatures = [];
+                if (adapter.features.has('shader-f16')){
+                    requiredFeatures.push('shader-f16');
+                }
+                const device = await adapter.requestDevice({requiredFeatures});
                 activeGPUDevice = device;
                 
                 const matrixSizes = [256, 512, 1024, 2048, 4096];
@@ -423,7 +454,7 @@ startBtn.addEventListener('click', () => {
                     
                     gflopsDisplay.innerText = `Testing ${size}x${size}...`;
                     
-                    const resultGflops = await runWebGPUStage(device, size, 50, () => isEngineRunning);
+                    const resultGflops = await runWebGPUStage(device, size, userIters, userPrecision, () => isEngineRunning);
                     
                     if (!isEngineRunning || resultGflops.gflops === 0) break;
                     
@@ -567,4 +598,5 @@ processorSelect.addEventListener('change', (event) => {
             gpuWarnMsg.classList.remove('hidden');
         }
     }
+    updatePreciOption();
 });

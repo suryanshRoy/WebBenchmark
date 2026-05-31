@@ -22,7 +22,7 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>,
     let local_col = local_id.x;
     let size = uniforms.size;
 
-    var sum = 0.0;
+    var sum: f32 = 0.0;
     let numTiles = size / TILE_SIZE;
 
     for (var t =0u; t < numTiles; t = t + 1u) {

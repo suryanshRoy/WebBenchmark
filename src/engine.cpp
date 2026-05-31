@@ -2,6 +2,7 @@
 #include <thread>
 #include <vector>
 #include <algorithm>
+#include <wasm_simd128.h>
 
 extern "C" {
     // Pointers for arrays
@@ -34,7 +35,7 @@ extern "C" {
         }
     }
 
-    float run_stress_test(int iterations) {
+    float run_stress_test(int iterations, int precision_type) {
         // Available CPU cores detection:
         unsigned int num_threads = std::thread::hardware_concurrency();
         if (num_threads == 0) num_threads = 4; 
@@ -50,12 +51,69 @@ extern "C" {
                         C[i * CURRENT_SIZE + j] = 0.0f;
                     }
                 }
+                // Float4 32bit (simd 128-bit)
+                if (precision_type == 2) {
+                    
+                    for (int i = start_row; i < end_row; i++){
+                        for (int k = 0; k < CURRENT_SIZE; k++) {
+                            v128_t a_ik = wasm_f32x4_splat(A[i * CURRENT_SIZE + k]);
+                            for (int j = 0; j < CURRENT_SIZE; j +=4) {
+                                v128_t b_vec = wasm_v128_load(&B[k * CURRENT_SIZE + j]);
+                                v128_t c_vec = wasm_v128_load(&C[i * CURRENT_SIZE + j]);
 
-                for (int i = start_row; i < end_row; i++) {
-                    for (int k = 0; k<CURRENT_SIZE; k++){
-                        float a_ik = A[i * CURRENT_SIZE + k];
-                        for (int j = 0; j < CURRENT_SIZE; j++) {
-                            C[i * CURRENT_SIZE + j] += a_ik * B[k * CURRENT_SIZE + j];
+                                v128_t prod = wasm_f32x4_mul(a_ik, b_vec);
+                                c_vec = wasm_f32x4_add(c_vec, prod);
+
+                                wasm_v128_store(&C[i * CURRENT_SIZE + j], c_vec);
+                            }
+                        }
+                    }
+                }
+                // f64 scalar
+                else if (precision_type == 1) {
+                    for (int i = start_row; i < end_row; i++){
+                        for (int k = 0; k < CURRENT_SIZE; k++){
+                            double a_ik = (double)A[i * CURRENT_SIZE + k];
+                            for (int j = 0; j< CURRENT_SIZE; j++){
+                                double b_kj = (double)B[k*CURRENT_SIZE+ j];
+                                C[i * CURRENT_SIZE + j] += (float)(a_ik * b_kj);
+                            }
+                        }
+                    }
+                }
+
+                // F64*2 SIMD
+                else if(precision_type == 3) {
+                    for (int i = start_row; i < end_row; i++) {
+                        for (int k = 0; k < CURRENT_SIZE; k++){
+                            v128_t a_ik = wasm_f64x2_splat((double)A[i * CURRENT_SIZE + k]);
+
+                            for (int j= 0; j< CURRENT_SIZE; j += 2) {
+                                double b0 = (double)B[k * CURRENT_SIZE+ j];
+                                double b1 = (double)B[k * CURRENT_SIZE + j + 1];
+                                v128_t b_vec = wasm_f64x2_make(b0, b1); // pack double into 128bit simd register
+
+                                double c0 = (double)C[i * CURRENT_SIZE + j];
+                                double c1 = (double)C[i * CURRENT_SIZE + j + 1];
+                                v128_t c_vec = wasm_f64x2_make(c0, c1);
+                                v128_t prod = wasm_f64x2_mul(a_ik, b_vec);
+                                c_vec = wasm_f64x2_add(c_vec, prod);
+
+                                C[i * CURRENT_SIZE + j] = (float)wasm_f64x2_extract_lane(c_vec, 0);
+                                C[i * CURRENT_SIZE + j + 1] = (float)wasm_f64x2_extract_lane(c_vec, 1);
+                                
+                            }
+                        }
+                    }
+                }
+                else { // f32-scalar
+
+                    for (int i = start_row; i < end_row; i++) {
+                        for (int k = 0; k<CURRENT_SIZE; k++){
+                            float a_ik = A[i * CURRENT_SIZE + k];
+                            for (int j = 0; j < CURRENT_SIZE; j++) {
+                                C[i * CURRENT_SIZE + j] += a_ik * B[k * CURRENT_SIZE + j];
+                            }
                         }
                     }
                 }
