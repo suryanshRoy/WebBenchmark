@@ -297,6 +297,24 @@ benchmarkWorker.onerror = function(error) {
     console.error("Worker error: ", error);
 }
 
+function runCPUMatrix(size, iterations, precision) {
+    return new Promise((resolve) => {
+        const tempListener = (e) => {
+            if (e.data.type === 'RUN2_COMPLETE') {
+                benchmarkWorker.removeEventListener('message', tempListener);
+                resolve({gflops: parseFloat(e.data.gflops), timeTakenSec: e.data.timeTakenSec});
+            }
+        };
+        benchmarkWorker.addEventListener('message', tempListener);
+        benchmarkWorker.postMessage({
+            type: 'START_2',
+            matrix: size,
+            iterations: iterations,
+            precision: precision 
+        });
+    });
+}
+
 // Start Button Control!!!
 startBtn.addEventListener('click', () => {
     if (currentProcessor === 'CPU' && !isEngineReady) {
@@ -322,11 +340,72 @@ startBtn.addEventListener('click', () => {
 
     isEngineRunning = true; 
     if (currentProcessor === 'CPU') {
-        benchmarkWorker.postMessage({type: 'START', iterations: 20});
+        console.log("WASM CPU starting up...");
+        gflopsDisplay.innerText = "Waking up CPU...";
+
+        (async() => {
+            try {
+                const matrixSize = [256, 512, 1024, 2048, 4096];
+                let performanceData = [];
+                let FinalGFLOPS = 0;
+
+                const userIters = parseInt(iterInput.value) || 20;
+                const userPrecision = computeType.value;
+
+                for(let size of matrixSize){
+                    if (!isEngineRunning) break;
+                    gflopsDisplay.innerText = `Testing ${size}x${size}...`;
+
+                    const result = await runCPUMatrix(size, userIters, userPrecision);
+                    if (!isEngineRunning || result.gflops === 0) {
+                        break;
+                    }
+                    if (result.gflops > FinalGFLOPS){
+                        FinalGFLOPS =  result.gflops;
+                    }
+
+                    performanceData.push({matrix: size, gflops: result.gflops});
+                    currentGraphData = performanceData;
+                    plotPerformanceCurve(performanceData);
+
+                    // REVIEW: May require some changes
+                    const nextEstimatedTime = result.timeTakenSec * 8.0;
+                    if (nextEstimatedTime > 3.0) {
+                        console.warn(`Matrix ${size} took ${result.timeTakenSec.toFixed(2)}s. Next may take it's 8x time!`);
+                        break;
+                    }
+                }
+
+                if (isEngineRunning) {
+                    let displaySpeed = "";
+                    if (FinalGFLOPS >= 1000) {
+                        displaySpeed = `${(FinalGFLOPS / 1000).toFixed(2)} TFLOPS`;
+                    } else {
+                        displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
+                    }                    
+                    gflopsDisplay.innerText = displaySpeed;
+                    statusText.innerText = 'Completed';
+                    statusText.classList.remove("running");
+                    statusText.classList.add('idle');
+                    stopBtn.classList.add("is-disabled");
+                    isEngineRunning = false;
+                }
+            }
+            catch (error) {
+                console.error("CPU Test Failed! Error: ", error);
+                if (isEngineRunning) {
+                    warningMsg.innerText = "CPU Execution Failed!";
+                    warningMsg.classList.add('show-warning');
+                    stopBtn.click();
+                }
+            }
+        })();
     }
+
     else {
+        
         console.log("WebGPU Pipeline starting...");
-        gflopsDisplay.innerText = "Warming up GPU...";
+        gflopsDisplay.innerText = "Waking up GPU...";
 
         (async () => {
             try {
@@ -337,7 +416,7 @@ startBtn.addEventListener('click', () => {
                 
                 const matrixSizes = [256, 512, 1024, 2048, 4096];
                 let performanceData = [];
-                let bestGflops = 0;
+                let FinalGFLOPS = 0;
                 
                 for (let size of matrixSizes) {
                     if (!isEngineRunning) break;
@@ -349,7 +428,7 @@ startBtn.addEventListener('click', () => {
                     if (!isEngineRunning || resultGflops.gflops === 0) break;
                     
                     const currentGflops = resultGflops.gflops;
-                    if (currentGflops > bestGflops) bestGflops = currentGflops;
+                    if (currentGflops > FinalGFLOPS) FinalGFLOPS = currentGflops;
                     
                     performanceData.push({matrix: size, gflops: currentGflops});
                     currentGraphData = performanceData;
@@ -363,10 +442,10 @@ startBtn.addEventListener('click', () => {
 
                 if (isEngineRunning) {
                     let displaySpeed = "";
-                    if (bestGflops >= 1000) {
-                        displaySpeed = `${(bestGflops / 1000).toFixed(2)} TFLOPS`;
+                    if (FinalGFLOPS >= 1000) {
+                        displaySpeed = `${(FinalGFLOPS / 1000).toFixed(2)} TFLOPS`;
                     } else {
-                        displaySpeed = `${bestGflops.toFixed(2)} GFLOPS`;
+                        displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
                     }
                     gflopsDisplay.innerText = displaySpeed;
 

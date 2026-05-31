@@ -1,5 +1,5 @@
-const MATRIX_SIZE = 512;
-const FLOP_PER_ITERATION = 2 * Math.pow(MATRIX_SIZE, 3);
+const DEFAULT_MAT_SIZE = 512;
+const FLOP_PER_ITERATION = 2 * Math.pow(DEFAULT_MAT_SIZE, 3);
 
 let engineInstance = null;
 let isEngineRunning = false;
@@ -19,13 +19,14 @@ createEngine({
 }).then((Module) => {
     console.log("ENGINE LOADED!");
     engineInstance = Module;
-    engineInstance._init_memory(MATRIX_SIZE);
+    engineInstance._init_memory(DEFAULT_MAT_SIZE);
     
     postMessage({type: 'READY'});
 }).catch((error) => {
     console.error("FATAL ENGINE ERROR:", error);
 });
 
+// Infinite loop for CPU thermal throttling 
 function runBenchmarkLoop(iterations) {
     if (!isEngineRunning || !engineInstance) return;
 
@@ -51,7 +52,32 @@ function runBenchmarkLoop(iterations) {
 self.onmessage = function(event) {
     if(event.data.type === 'START') {
         isEngineRunning = true;
+        // Reset mem to default
+        engineInstance._init_memory(DEFAULT_MAT_SIZE);
         runBenchmarkLoop(event.data.iterations);
+    }
+    else if (event.data.type === "START_2") {
+        if (!engineInstance) return;
+
+        const matrixSize = event.data.matrix;
+        const iterations = event.data.iterations;
+        const precision = event.data.precision;
+
+        engineInstance._init_memory(matrixSize); // reallocate c++ mem
+
+        const startTime = performance.now();
+        engineInstance._run_stress_test(iterations);
+        const end_time = performance.now();
+
+        const timeTakenSec = (end_time - startTime) /1000;
+        const totalFlops = (2 * Math.pow(matrixSize, 3)) * iterations;
+        const gflops = (totalFlops / timeTakenSec) / 1e9;
+
+        this.postMessage({
+            type: 'RUN2_COMPLETE',
+            gflops: gflops.toFixed(2),
+            timeTakenSec: timeTakenSec
+        });
     }
     else if (event.data.type === 'STOP'){
         isEngineRunning = false;
