@@ -1,6 +1,6 @@
-import { runWebGPUStage } from "./gpu-engine";
+import { GPU_ALU, runWebGPU } from "./gpu-engine";
 
-// Get btn and warning elements
+//  btn and warning elements
 const startBtn = document.getElementById('start-btn');
 const stopBtn = document.getElementById('stop-btn');
 const statusText = document.getElementById('status-text');
@@ -167,7 +167,7 @@ function plotPerformanceCurve(performanceData) {
     const axisColor = isLightMode ? 'rgb(0, 25, 12)' : 'rgba(255, 255, 255, 0.2)';
     const gridTextColor = isLightMode ? 'rgba(30, 35, 40, 0.8)' : 'rgba(200, 200, 200, 0.8)';
     const scaleTextColor = isLightMode ? 'rgb(0, 25, 12)' : 'rgba(150, 150, 150, 0.6)';
-    const peakTextColor = isLightMode ? 'rgba(0, 140, 110, 0.8)' : 'rgba(98, 242, 108, 0.87)';
+    const maxGflopsColor = isLightMode ? 'rgba(0, 140, 110, 0.8)' : 'rgba(98, 242, 108, 0.87)';
     const nodeTextColor = isLightMode ? 'rgba(0, 140, 114, 0.85)' : 'rgb(0, 201, 205)';
     const lineColor = isLightMode ? 'rgba(18, 210, 175, 0.84)' : 'rgba(0, 255, 204, 0.86)';
     const gradientStart = isLightMode ? 'rgba(37, 207, 165, 0.66)' : 'rgba(0, 255, 204, 0.29)';
@@ -237,14 +237,14 @@ function plotPerformanceCurve(performanceData) {
     ctx.fillText(`${(maxGflops / 2).toFixed(0)}`, padding.left - 8, padding.top + (graphHeight / 2));
     ctx.fillText(`0`, padding.left - 8, bottomY);
 
-    ctx.fillStyle = peakTextColor;
+    ctx.fillStyle = maxGflopsColor;
     ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    const peakText = maxGflops >= 1000 
-        ? `Peak: ${(maxGflops/1000).toFixed(2)} TFLOPS` 
-        : `Peak: ${maxGflops.toFixed(1)} GFLOPS`;
-    ctx.fillText(peakText, padding.left, 5);
+    const maxTflops = maxGflops >= 1000 
+        ? `Max Value: ${(maxGflops/1000).toFixed(2)} TFLOPS` 
+        : `Max Value: ${maxGflops.toFixed(1)} GFLOPS`;
+    ctx.fillText(maxTflops, padding.left, 5);
 }
 
 const simdCheckbox = document.getElementById('simd-checkbox');
@@ -323,15 +323,16 @@ benchmarkWorker.onerror = function(error) {
     console.error("Worker error: ", error);
 }
 
-function runCPUMatrix(size, iterations, precision) {
+// Memory based computation
+function cpuMatRun(size, iterations, precision) {
     return new Promise((resolve) => {
-        const tempListener = (e) => {
+        const listner = (e) => {
             if (e.data.type === 'RUN2_COMPLETE') {
-                benchmarkWorker.removeEventListener('message', tempListener);
+                benchmarkWorker.removeEventListener('message', listner);
                 resolve({gflops: parseFloat(e.data.gflops), timeTakenSec: e.data.timeTakenSec});
             }
         };
-        benchmarkWorker.addEventListener('message', tempListener);
+        benchmarkWorker.addEventListener('message', listner);
         benchmarkWorker.postMessage({
             type: 'START_2',
             matrix: size,
@@ -395,7 +396,7 @@ startBtn.addEventListener('click', () => {
                     if (!isEngineRunning) break;
                     gflopsDisplay.innerText = `Testing ${size}x${size}...`;
 
-                    const result = await runCPUMatrix(size, userIters, userPrecision);
+                    const result = await cpuMatRun(size, userIters, userPrecision);
                     if (!isEngineRunning || result.gflops === 0) {
                         break;
                     }
@@ -468,7 +469,7 @@ startBtn.addEventListener('click', () => {
                     
                     gflopsDisplay.innerText = `Testing ${size}x${size}...`;
                     
-                    const resultGflops = await runWebGPUStage(device, size, userIters, userPrecision, () => isEngineRunning);
+                    const resultGflops = await runWebGPU(device, size, userIters, userPrecision, () => isEngineRunning);
                     
                     if (!isEngineRunning || resultGflops.gflops === 0) break;
                     
@@ -487,17 +488,23 @@ startBtn.addEventListener('click', () => {
 
                 if (isEngineRunning) {
                     let displaySpeed = "";
-                    if (FinalGFLOPS >= 1000) {
-                        displaySpeed = `${(FinalGFLOPS / 1000).toFixed(2)} TFLOPS`;
-                    } else {
-                        displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
-                    }
+                    displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
                     gflopsDisplay.innerText = displaySpeed;
+                
 
-                    statusText.innerText = 'Completed';
-                    statusText.classList.remove('running');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    if (!isEngineRunning) return;
+
+                    statusText.innerText = 'Starting ALU Stress Test...'
+                    gflopsDisplay.innerText = 'Starting ALU Stress Test...';
+
+                    const ResultAluGflops = await GPU_ALU(device, () => isEngineRunning);
+
+                    gflopsDisplay.innerText = `${ResultAluGflops.toFixed(2)} GFLOPS`;
+                    statusText.innerText = `Completed`;
+                    statusText.classList.remove("running");
                     statusText.classList.add('idle');
-                    stopBtn.classList.add('is-disabled');
+                    stopBtn.classList.add("is-disabled");
                     isEngineRunning = false;
                     toggleUILock(false);
                 }

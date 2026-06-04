@@ -1,6 +1,7 @@
-import matrixMultiplyWGSL from './compute.wgsl?raw'
+import matrixMultiplyWGSL from './compute.wgsl?raw';
+import aluWGSL from './ALU_compute.wgsl?raw';
 
-export async function runWebGPUStage(device, matrixSize, iterations, precision, isRunningFn) {
+export async function runWebGPU(device, matrixSize, iterations, precision, isRunning) {
     const totalElements = matrixSize * matrixSize;
     const isF16 = precision.includes('f16')
     const byteSize = totalElements * (isF16?  2:4); 
@@ -65,7 +66,7 @@ export async function runWebGPUStage(device, matrixSize, iterations, precision, 
     await device.queue.onSubmittedWorkDone(); 
     const calibTimeMs = performance.now() - startTime;
 
-    if (isRunningFn && !isRunningFn()) {
+    if (isRunning && !isRunning()) {  // see decleration in the main js
         bufferA.destroy();
         bufferB.destroy();
         bufferC.destroy();
@@ -132,4 +133,67 @@ export async function runWebGPUStage(device, matrixSize, iterations, precision, 
     const gflops = (totalFlops / timeTakenSec) / 1e9;
 
     return {gflops: gflops, timeTakenSec: timeTakenSec};
+}
+
+export async function GPU_ALU(device, isRunning){
+    const shaderModule = device.createShaderModule({code: aluWGSL});
+
+    const computePipeline = await device.createComputePipelineAsync({
+        layout: 'auto',
+        compute:{
+            module:shaderModule,
+            entryPoint: 'main',
+        },
+    });
+
+    // FIXME: Currently static only for normal system! Need to be dynamically adjust itself!
+    const threadsCount = 262144; //std thread
+    const bufferSize= threadsCount*4;
+    
+    const inputBuf = device.createBuffer({size: bufferSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST}); // simultaneously
+    const outputBuf = device.createBuffer({size: bufferSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC});
+
+    const inputData = new Float32Array(threadsCount);
+    for (let i = 0; i < threadsCount; i++) {
+        // Random values to ensure the GPU doesn't skip calculations
+        inputData[i] = Math.random() * 0.5 + 0.1;
+    }
+    device.queue.writeBuffer(inputBuf, 0, inputData);
+
+    const bindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            {
+                binding: 0, resource: {buffer:inputBuf}
+            },
+            {
+                binding: 1, resource: {buffer: outputBuf}
+            }
+        ],
+    });
+    
+    const countWorkGroup = Math.ceil(threadsCount / 256);
+    const startTime = performance.now();
+    let completedIters = 0;
+    const durationMs = 5000;
+
+    while (performance.now() - startTime< durationMs) {
+        if (isRunning && !isRunning()) break; // see decleration in the main js
+
+        const commandEncoder = device.createCommandEncoder();
+        const passEncoder = commandEncoder.beginComputePass();
+        passEncoder.setPipeline(computePipeline);
+        passEncoder.setBindGroup(0, bindGroup);
+        passEncoder.dispatchWorkgroups(countWorkGroup);
+        passEncoder.end();
+
+        device.queue.submit([commandEncoder.finish()]);
+        await device.queue.onSubmittedWorkDone();
+        completedIters++; 
+        console.log(completedIters); // REVIEW MAKE SURE TO REMOVE THIS
+    }
+
+    const timeTaken = performance.now() - startTime;
+    const finalOps = completedIters * threadsCount * 64000;
+    return (finalOps / (timeTaken / 1000) / 1e9);
 }
