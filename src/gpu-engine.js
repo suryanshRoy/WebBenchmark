@@ -205,17 +205,17 @@ export async function GPU_ALU(device, isRunning, onUpdate){
             await device.queue.onSubmittedWorkDone();
 
             const endFrame = performance.now();
-            const timeTaken = (endFrame - startFrame) / 1000;
+            const timeSpent = endFrame - startFrame;
+            const timeTaken = timeSpent / 1000;
             const totalFlops = flopsPerDispatch * dispatchPerRun;
             const gflops = (totalFlops / timeTaken) / 1e9;
-            const timeSpent = endFrame - startFrame;
             currentGflops = gflops;
 
             if (onUpdate) {
                 onUpdate(gflops);
             }
             if (timeSpent > 0){
-                const ratio = 100 / timeTaken;
+                const ratio = 100 / timeSpent;
                 let nextDispatch = Math.round(dispatchPerRun * ratio);
                 dispatchPerRun = Math.max(1, Math.min(60, nextDispatch));
             }
