@@ -495,18 +495,37 @@ startBtn.addEventListener('click', () => {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     if (!isEngineRunning) return;
 
-                    statusText.innerText = 'Starting ALU Stress Test...'
-                    gflopsDisplay.innerText = 'Starting ALU Stress Test...';
+                    statusText.innerText = 'Computing ALU Stress Test...'
+                    gflopsDisplay.innerText = 'Computing ALU Stress Test...';
 
-                    const ResultAluGflops = await GPU_ALU(device, () => isEngineRunning);
+                    const ResultAluGflops = await GPU_ALU(device, () => isEngineRunning, (gflops) =>{
 
-                    gflopsDisplay.innerText = `${ResultAluGflops.toFixed(2)} GFLOPS`;
-                    statusText.innerText = `Completed`;
-                    statusText.classList.remove("running");
-                    statusText.classList.add('idle');
-                    stopBtn.classList.add("is-disabled");
-                    isEngineRunning = false;
-                    toggleUILock(false);
+                    let displayText = "";
+                    if (gflops >=1000){
+                        displayText = `${(gflops / 1000).toFixed(2)} TFLOPS`;
+                    }
+                    else {
+                        displayText = `${gflops.toFixed(2)} GFLOPS`;
+                    }
+                    gflopsDisplay.innerText = displayText;
+                    });
+
+                    if (isEngineRunning){
+                        let finalDisplay = "";
+                        if (ResultAluGflops >= 1000){
+                            finalDisplay = `${(ResultAluGflops / 1000).toFixed(2)} TFLOPS`;
+                        }
+                        else{
+                            finalDisplay = `${ResultAluGflops.toFixed(2)} GFLOPS`;
+                        }
+                        gflopsDisplay.innerText = finalDisplay;
+                        statusText.innerText = `Completed`;
+                        statusText.classList.remove("running");
+                        statusText.classList.add('idle');
+                        stopBtn.classList.add("is-disabled");
+                        isEngineRunning = false;
+                        toggleUILock(false);
+                    }
                 }
             }
             catch (error) {

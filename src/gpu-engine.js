@@ -135,7 +135,7 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
     return {gflops: gflops, timeTakenSec: timeTakenSec};
 }
 
-export async function GPU_ALU(device, isRunning){
+export async function GPU_ALU(device, isRunning, onUpdate){
     const shaderModule = device.createShaderModule({code: aluWGSL});
 
     const computePipeline = await device.createComputePipelineAsync({
@@ -173,27 +173,55 @@ export async function GPU_ALU(device, isRunning){
     });
     
     const countWorkGroup = Math.ceil(threadsCount / 256);
-    const startTime = performance.now();
-    let completedIters = 0;
-    const durationMs = 5000;
+    const durationMs = 10000; 
+    const flopsPerDispatch = 32 * 2000 * threadsCount;
+    // Start with 5 dispatches, auto-calibrate
+    let dispatchPerRun = 5; // ai helped calibration fix
 
-    while (performance.now() - startTime< durationMs) {
-        if (isRunning && !isRunning()) break; // see decleration in the main js
+    return new Promise((resolve) => {
+        const startTime = performance.now();
+        let currentGflops = 0;
 
-        const commandEncoder = device.createCommandEncoder();
-        const passEncoder = commandEncoder.beginComputePass();
-        passEncoder.setPipeline(computePipeline);
-        passEncoder.setBindGroup(0, bindGroup);
-        passEncoder.dispatchWorkgroups(countWorkGroup);
-        passEncoder.end();
+        async function runFrame() {
+            if ((isRunning && !isRunning()) || (performance.now() - startTime >= durationMs)){
+                inputBuf.destroy();
+                outputBuf.destroy();
+                resolve(currentGflops);
+                return;
+            }
+            
+            const startFrame = performance.now();
+            const encoder = device.createCommandEncoder();
+            const pass = encoder.beginComputePass();
+            pass.setPipeline(computePipeline);
+            pass.setBindGroup(0, bindGroup);
 
-        device.queue.submit([commandEncoder.finish()]);
-        await device.queue.onSubmittedWorkDone();
-        completedIters++; 
-        console.log(completedIters); // REVIEW MAKE SURE TO REMOVE THIS
-    }
+            for (let i = 0; i< dispatchPerRun; i++){
+                pass.dispatchWorkgroups(countWorkGroup);
+            }
+            pass.end();
 
-    const timeTaken = performance.now() - startTime;
-    const finalOps = completedIters * threadsCount * 64000;
-    return (finalOps / (timeTaken / 1000) / 1e9);
+            device.queue.submit([encoder.finish()]);
+            await device.queue.onSubmittedWorkDone();
+
+            const endFrame = performance.now();
+            const timeTaken = (endFrame - startFrame) / 1000;
+            const totalFlops = flopsPerDispatch * dispatchPerRun;
+            const gflops = (totalFlops / timeTaken) / 1e9;
+            const timeSpent = endFrame - startFrame;
+            currentGflops = gflops;
+
+            if (onUpdate) {
+                onUpdate(gflops);
+            }
+            if (timeSpent > 0){
+                const ratio = 100 / timeTaken;
+                let nextDispatch = Math.round(dispatchPerRun * ratio);
+                dispatchPerRun = Math.max(1, Math.min(60, nextDispatch));
+            }
+            requestAnimationFrame(runFrame);
+        }
+
+        requestAnimationFrame(runFrame);
+    });
 }
