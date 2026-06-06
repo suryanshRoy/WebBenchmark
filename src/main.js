@@ -150,7 +150,7 @@ function plotPerformanceCurve(performanceData) {
     canvas.width = canvas.parentElement.clientWidth;
     canvas.height = canvas.parentElement.clientHeight || 250;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // clear up the graph before plotting newer
 
     const placeholder = canvas.parentElement.querySelector('.placeholder-text');
     if (placeholder) placeholder.style.display = 'none';
@@ -209,11 +209,13 @@ function plotPerformanceCurve(performanceData) {
     gradient.addColorStop(1, gradientEnd);
     ctx.fillStyle = gradient;
     ctx.fill();
+    const isALU = performanceData.length > 0 && performanceData[0].matrix === null;
 
     coords.forEach((coord, index) => {
         // Display points on Graph
         const point = performanceData[index];
 
+        if (!isALU){
         ctx.fillStyle = 'rgba(255, 49, 49, 0.82)';
         ctx.beginPath();
         ctx.arc(coord.x, coord.y, 4, 0, Math.PI * 2);
@@ -227,6 +229,15 @@ function plotPerformanceCurve(performanceData) {
         
         ctx.fillStyle = nodeTextColor;
         ctx.fillText(`${point.gflops.toFixed(0)} GF`, coord.x, coord.y - 10);
+        } 
+        else{
+            if (index % 10 === 0){
+                ctx.fillStyle = gridTextColor;
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${(index / 10).toFixed(0)}s`, coord.x, bottomY + 15);
+            }
+        }
     });
 
     // Y-axis limits
@@ -519,7 +530,8 @@ startBtn.addEventListener('click', () => {
                         activeGPUDevice = null;
                         return;
                     }
-
+                    
+                    let aluResult = [];
                     const ResultAluGflops = await GPU_ALU(aluDevice, () => isEngineRunning, (gflops) => {
 
                     let displayText = "";
@@ -529,7 +541,9 @@ startBtn.addEventListener('click', () => {
                     else {
                         displayText = `${gflops.toFixed(2)} GFLOPS`;
                     }
+                    aluResult.push({matrix: null, gflops: gflops});
                     gflopsDisplay.innerText = displayText;
+                    plotPerformanceCurve(aluResult);
                     });
 
                     if (isEngineRunning){
