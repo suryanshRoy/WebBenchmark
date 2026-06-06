@@ -490,15 +490,37 @@ startBtn.addEventListener('click', () => {
                     let displaySpeed = "";
                     displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
                     gflopsDisplay.innerText = displaySpeed;
+
+                    device.destroy();
+                    activeGPUDevice = null;
                 
 
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                     if (!isEngineRunning) return;
 
                     statusText.innerText = 'Computing ALU Stress Test...'
                     gflopsDisplay.innerText = 'Computing ALU Stress Test...';
 
-                    const ResultAluGflops = await GPU_ALU(device, () => isEngineRunning, (gflops) =>{
+                    const aluAdapter = await navigator.gpu.requestAdapter();
+                    if (!aluAdapter || !isEngineRunning) {
+                        statusText.innerText = 'Completed';
+                        statusText.classList.remove("running");
+                        statusText.classList.add('idle');
+                        stopBtn.classList.add("is-disabled");
+                        isEngineRunning = false;
+                        toggleUILock(false);
+                        return;
+                    }
+                    const aluDevice = await aluAdapter.requestDevice();
+                    activeGPUDevice = aluDevice;
+
+                    if (!isEngineRunning) {
+                        aluDevice.destroy();
+                        activeGPUDevice = null;
+                        return;
+                    }
+
+                    const ResultAluGflops = await GPU_ALU(aluDevice, () => isEngineRunning, (gflops) => {
 
                     let displayText = "";
                     if (gflops >=1000){
