@@ -1,5 +1,6 @@
-import { GPU_ALU, runWebGPU } from "./gpu-engine";
-import { plotPerformanceCurve } from "./performanceCurve.js";
+import {GPU_ALU, runWebGPU} from "./gpu-engine";
+import {plotPerformanceCurve} from "./performanceCurve.js";
+import {detectUserGPU} from "./detectProcessor.js";
 
 //  btn and warning elements
 const startBtn = document.getElementById('start-btn');
@@ -34,7 +35,7 @@ function toggleSidebar() {
     sidebarOverlay.classList.toggle('active');
 }
 
-function updatePreciOption() {
+function updatePreciOption() { // precision options
     computeType.innerHTML = '';
     const isSIMD = simdCheckbox.checked;
     const isCPU = processorSelect.value === "CPU";
@@ -110,7 +111,7 @@ themeToggleBtn.addEventListener('click', () => {
     }
 });
 
-// for UI pop
+// for UI settings pop
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem("benchmark_appearance");
     if (savedTheme === 'light') {
@@ -486,7 +487,6 @@ stopBtn.addEventListener('click', () => {
         gflopsDisplay.innerText = "GPU Test Aborted";
     }
 
-
     stopBtn.classList.add('is-disabled');
     statusText.innerText = 'Ready';
     statusText.classList.remove('running');
@@ -494,53 +494,7 @@ stopBtn.addEventListener('click', () => {
 });
 
 // Processor & GPU detection
-async function detectUserGPU() {
-
-    cpuWarnMsg.classList.add('hidden');
-
-    try {
-        if (navigator.gpu) {
-            const adapter = await navigator.gpu.requestAdapter();
-            if (adapter) {
-                const info = adapter.info;
-                const apiName = info.architecture || info.vendor || 'WebGPU';
-
-                optGPU.innerText = `GPU (${apiName})`;
-                showGpuFallbackMsg = false;
-                gpuWarnMsg.classList.add('hidden');
-                return;
-            }
-        }
-        
-        
-        const canvas = document.createElement('canvas');
-        const glContext = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-
-        if (glContext) {
-            const debugInfo = glContext.getExtension('WEBGL_debug_renderer_info');
-            const rendererName = debugInfo ? glContext.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'WebGL';
-
-            optGPU.innerText = `GPU (WebGL)`;
-            gpuWarnMsg.innerText = `WebGL Active: ${rendererName}`;
-            showGpuFallbackMsg = true;
-            gpuWarnMsg.classList.remove('hidden');
-            return;
-        }
-
-        optGPU.innerText = "GPU";
-        gpuWarnMsg.innerText = "Graphics hardware unsupported";
-        showGpuFallbackMsg = true;
-        gpuWarnMsg.classList.remove('hidden');
-    } catch (error) {
-        console.error("GPU detection failed", error);
-        optGPU.innerText = "GPU";
-        gpuWarnMsg.innerText = "GPU detection failed.";
-        showGpuFallbackMsg = true;
-        gpuWarnMsg.classList.remove('hidden');
-    }
-}
-
-detectUserGPU();
+detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg, showGpuFallbackMsg);
 
 processorSelect.addEventListener('change', (event) => {
     if (isEngineRunning) {
