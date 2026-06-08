@@ -494,7 +494,9 @@ stopBtn.addEventListener('click', () => {
 });
 
 // Processor & GPU detection
-detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg, showGpuFallbackMsg);
+detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg).then((fallbackMsg) => {
+    showGpuFallbackMsg = fallbackMsg;
+});
 
 processorSelect.addEventListener('change', (event) => {
     if (isEngineRunning) {

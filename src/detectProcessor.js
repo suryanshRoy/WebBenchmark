@@ -1,4 +1,4 @@
-export async function detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg, showGpuFallbackMsg) {
+export async function detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg) {
 
     cpuWarnMsg.classList.add('hidden');
 
@@ -10,9 +10,9 @@ export async function detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg, showGpuFallb
                 const apiName = info.architecture || info.vendor || 'WebGPU';
 
                 optGPU.innerText = `GPU (${apiName})`;
-                showGpuFallbackMsg = false;
                 gpuWarnMsg.classList.add('hidden');
-                return;
+
+                return false;
             }
         }
         
@@ -25,20 +25,22 @@ export async function detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg, showGpuFallb
 
             optGPU.innerText = `GPU (WebGL)`;
             gpuWarnMsg.innerText = `WebGL Active: ${rendererName}`;
-            showGpuFallbackMsg = true;
             gpuWarnMsg.classList.remove('hidden');
-            return;
+
+            return true;
         }
 
         optGPU.innerText = "GPU";
         gpuWarnMsg.innerText = "Graphics hardware unsupported";
-        showGpuFallbackMsg = true;
         gpuWarnMsg.classList.remove('hidden');
+
+        return true;
     } catch (error) {
         console.error("GPU detection failed", error);
         optGPU.innerText = "GPU";
         gpuWarnMsg.innerText = "GPU detection failed.";
-        showGpuFallbackMsg = true;
         gpuWarnMsg.classList.remove('hidden');
+
+        return true;
     }
 }
