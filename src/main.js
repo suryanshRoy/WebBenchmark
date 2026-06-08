@@ -1,6 +1,6 @@
 import {GPU_ALU, runWebGPU} from "./gpu-engine";
 import {plotPerformanceCurve} from "./performanceCurve.js";
-import {detectUserGPU} from "./detectProcessor.js";
+import {detectUserGPU, processorListner} from "./processorManager.js";
 
 //  btn and warning elements
 const startBtn = document.getElementById('start-btn');
@@ -20,22 +20,26 @@ const settingsModal = document.getElementById('settings-modal');
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 
 // Processor & GPU variables
-const processorSelect = document.getElementById('processor-select');
+export const processorSelect = document.getElementById('processor-select');
 const optGPU = document.getElementById('opt-GPU');
-const gpuWarnMsg = document.getElementById('gpu-warning-msg');
-const cpuWarnMsg = document.getElementById('cpu-warning-msg');
+export const gpuWarnMsg = document.getElementById('gpu-warning-msg');
+export const cpuWarnMsg = document.getElementById('cpu-warning-msg');
 
-let currentProcessor = 'GPU';
-let showGpuFallbackMsg = true;
+export let currentProcessor = 'GPU';
+export let showGpuFallbackMsg = true;
 let activeGPUDevice = null; // os oom killswitch
 let currentGraphData = [];
+
+export function setCurrentProcessor(value) {
+    currentProcessor = value;
+}
 
 function toggleSidebar() {
     sidebar.classList.toggle('closed');
     sidebarOverlay.classList.toggle('active');
 }
 
-function updatePreciOption() { // precision options
+export function updatePreciOption() { // precision options
     computeType.innerHTML = '';
     const isSIMD = simdCheckbox.checked;
     const isCPU = processorSelect.value === "CPU";
@@ -197,7 +201,7 @@ if(graphContainer) {
 }
 
 const gflopsDisplay = document.getElementById('gflops-current');
-let isEngineRunning = false;
+export let isEngineRunning = false;
 let isEngineReady = false;
 
 const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
@@ -496,25 +500,6 @@ stopBtn.addEventListener('click', () => {
 // Processor & GPU detection
 detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg).then((fallbackMsg) => {
     showGpuFallbackMsg = fallbackMsg;
-});
 
-processorSelect.addEventListener('change', (event) => {
-    if (isEngineRunning) {
-        event.target.value = currentProcessor;
-        return;
-    }
-
-    currentProcessor = event.target.value;
-    
-    if (currentProcessor === "CPU") {
-        cpuWarnMsg.classList.remove('hidden');
-        gpuWarnMsg.classList.add('hidden');
-    }
-    else {
-        cpuWarnMsg.classList.add('hidden');
-        if (showGpuFallbackMsg) {
-            gpuWarnMsg.classList.remove('hidden');
-        }
-    }
-    updatePreciOption();
+    processorListner();
 });
