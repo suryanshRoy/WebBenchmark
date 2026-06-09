@@ -50,20 +50,20 @@ export async function detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg) {
 
 export function processorListner() {
     mainData.processorSelect.addEventListener('change', (event) => {
-        if (mainData.isEngineRunning) {
-            event.target.value = mainData.currentProcessor;
+        if (mainData.AppState.isEngineRunning) {
+            event.target.value = mainData.AppState.currentProcessor;
             return;
         }
 
         setCurrentProcessor(event.target.value);
 
-        if (mainData.currentProcessor === "CPU") {
+        if (mainData.AppState.currentProcessor === "CPU") {
             mainData.cpuWarnMsg.classList.remove('hidden');
             mainData.gpuWarnMsg.classList.add('hidden');
         }
         else {
             mainData.cpuWarnMsg.classList.add('hidden');
-            if (mainData.showGpuFallbackMsg) {
+            if (mainData.AppState.showGpuFallbackMsg) {
                 mainData.gpuWarnMsg.classList.remove('hidden');
             }
         }

@@ -1,12 +1,12 @@
-import {GPU_ALU, runWebGPU} from "./gpu-engine";
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {detectUserGPU, processorListner} from "./processorManager.js";
+import {runCPU, runGPU, benchmarkWorker} from "./manage-run.js";
 
 //  btn and warning elements
 const startBtn = document.getElementById('start-btn');
-const stopBtn = document.getElementById('stop-btn');
-const statusText = document.getElementById('status-text');
-const warningMsg = document.getElementById('warning-msg');
+export const stopBtn = document.getElementById('stop-btn');
+export const statusText = document.getElementById('status-text');
+export const warningMsg = document.getElementById('warning-msg');
 
 // Sidebar Elements
 const menuBtn = document.getElementById('menu-btn');
@@ -25,13 +25,17 @@ const optGPU = document.getElementById('opt-GPU');
 export const gpuWarnMsg = document.getElementById('gpu-warning-msg');
 export const cpuWarnMsg = document.getElementById('cpu-warning-msg');
 
-export let currentProcessor = 'GPU';
-export let showGpuFallbackMsg = true;
-let activeGPUDevice = null; // os oom killswitch
-let currentGraphData = [];
+export const AppState = { // ai fixed issue 
+    currentProcessor: 'GPU',
+    showGpuFallbackMsg: true,
+    activeGPUDevice: null,
+    currentGraphData: [],
+    isEngineRunning: false,
+    isEngineReady: false
+};
 
 export function setCurrentProcessor(value) {
-    currentProcessor = value;
+    AppState.currentProcessor = value;
 }
 
 function toggleSidebar() {
@@ -39,7 +43,7 @@ function toggleSidebar() {
     sidebarOverlay.classList.toggle('active');
 }
 
-export function updatePreciOption() { // precision options
+export function updatePreciOption() { // NOTE precision options to be moved to UI-manager.js
     computeType.innerHTML = '';
     const isSIMD = simdCheckbox.checked;
     const isCPU = processorSelect.value === "CPU";
@@ -110,8 +114,8 @@ themeToggleBtn.addEventListener('click', () => {
         localStorage.setItem("benchmark_appearance", "dark");
     }
 
-    if (currentGraphData.length > 0) {
-        plotPerformanceCurve(currentGraphData);
+    if (AppState.currentGraphData.length > 0) {
+        plotPerformanceCurve(AppState.currentGraphData);
     }
 });
 
@@ -148,8 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const simdCheckbox = document.getElementById('simd-checkbox');
-const computeType = document.getElementById('compute-type');
-const iterInput = document.getElementById("iter-input");
+export const computeType = document.getElementById('compute-type');
+export const iterInput = document.getElementById("iter-input");
 
 simdCheckbox.addEventListener('change', (e)=> {
     localStorage.setItem('benchmark_simd', e.target.checked);
@@ -194,55 +198,15 @@ iterDown.addEventListener('click', () => {
 const graphContainer = document.querySelector('.canvas-container');
 if(graphContainer) {
     new ResizeObserver(() => {
-        if (currentGraphData.length > 0){
-            plotPerformanceCurve(currentGraphData);
+        if (AppState.currentGraphData.length > 0){
+            plotPerformanceCurve(AppState.currentGraphData);
         }
     }).observe(graphContainer);
 }
 
-const gflopsDisplay = document.getElementById('gflops-current');
-export let isEngineRunning = false;
-let isEngineReady = false;
+export const gflopsDisplay = document.getElementById('gflops-current');
 
-const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
-
-benchmarkWorker.onmessage = function(event) {
-    const data = event.data;
-
-    if (data.type === 'READY') {
-        console.log('WASM Worker Loaded & Ready');
-        statusText.innerText = 'Ready';
-        isEngineReady = true;
-    }
-    else if (data.type === 'UPDATE'){
-        gflopsDisplay.innerText = `${data.gflops} GFLOPS`;
-    }
-};
-
-benchmarkWorker.onerror = function(error) {
-    console.error("Worker error: ", error);
-}
-
-// Memory based computation
-function cpuMatRun(size, iterations, precision) {
-    return new Promise((resolve) => {
-        const listner = (e) => {
-            if (e.data.type === 'RUN2_COMPLETE') {
-                benchmarkWorker.removeEventListener('message', listner);
-                resolve({gflops: parseFloat(e.data.gflops), timeTakenSec: e.data.timeTakenSec});
-            }
-        };
-        benchmarkWorker.addEventListener('message', listner);
-        benchmarkWorker.postMessage({
-            type: 'START_2',
-            matrix: size,
-            iterations: iterations,
-            precision: precision 
-        });
-    });
-}
-
-function toggleUILock(isLocked){
+export function toggleUILock(isLocked){
     iterInput.disabled = isLocked;
     computeType.disabled = isLocked;
     processorSelect.disabled = isLocked;
@@ -256,212 +220,39 @@ function toggleUILock(isLocked){
 
 // Start Button Control!!!
 startBtn.addEventListener('click', () => {
-    if (currentProcessor === 'CPU' && !isEngineReady) {
+    if (AppState.currentProcessor === 'CPU' && !AppState.isEngineReady) {
         warningMsg.innerText = "Error: CPU WASM not compiled yet!";
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
         return;
     }
 
-    if (currentProcessor === 'GPU' && !navigator.gpu) {
+    if (AppState.currentProcessor === 'GPU' && !navigator.gpu) {
         warningMsg.innerText = "Error: WebGPU not supported on this device falling back to use WebGL if possible!";
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
         return;
     }
 
-    statusText.innerText = `Running ${currentProcessor} Stress Test...`;
+    statusText.innerText = `Running ${AppState.currentProcessor} Stress Test...`;
     statusText.classList.remove('idle');
     statusText.classList.add('running');
 
     stopBtn.classList.remove('is-disabled');
     warningMsg.classList.remove('show-warning');
 
-    const userIters = parseInt(iterInput.value) || 20;
-    const userPrecision = computeType.value;
-
-    isEngineRunning = true; 
+    AppState.isEngineRunning = true; 
     toggleUILock(true);
-    if (currentProcessor === 'CPU') {
+    if (AppState.currentProcessor === 'CPU') {
         console.log("WASM CPU starting up...");
         gflopsDisplay.innerText = "Waking up CPU...";
-
-        (async() => {
-            try {
-                const matrixSize = [256, 512, 1024, 2048, 4096];
-                let performanceData = [];
-                let FinalGFLOPS = 0;
-
-                for(let size of matrixSize){
-                    if (!isEngineRunning) break;
-                    gflopsDisplay.innerText = `Testing ${size}x${size}...`;
-
-                    const result = await cpuMatRun(size, userIters, userPrecision);
-                    if (!isEngineRunning || result.gflops === 0) {
-                        break;
-                    }
-                    if (result.gflops > FinalGFLOPS){
-                        FinalGFLOPS =  result.gflops;
-                    }
-
-                    performanceData.push({matrix: size, gflops: result.gflops});
-                    currentGraphData = performanceData;
-                    plotPerformanceCurve(performanceData);
-
-                    // REVIEW: May require some changes
-                    const nextEstimatedTime = result.timeTakenSec * 8.0;
-                    if (nextEstimatedTime > 6.0) {
-                        console.warn(`Matrix ${size} took ${result.timeTakenSec.toFixed(2)}s. Next may take it's 8x time!`);
-                        break;
-                    }
-                }
-
-                if (isEngineRunning) {
-                    let displaySpeed = "";
-                    if (FinalGFLOPS >= 1000) {
-                        displaySpeed = `${(FinalGFLOPS / 1000).toFixed(2)} TFLOPS`;
-                    } else {
-                        displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
-                    }                    
-                    gflopsDisplay.innerText = displaySpeed;
-                    statusText.innerText = 'Completed';
-                    statusText.classList.remove("running");
-                    statusText.classList.add('idle');
-                    stopBtn.classList.add("is-disabled");
-                    isEngineRunning = false;
-                    toggleUILock(false);
-                }
-            }
-            catch (error) {
-                console.error("CPU Test Failed! Error: ", error);
-                if (isEngineRunning) {
-                    warningMsg.innerText = "CPU Execution Failed!";
-                    warningMsg.classList.add('show-warning');
-                    stopBtn.click();
-                }
-            }
-        })();
+        runCPU()
     }
-
     else {
         
         console.log("WebGPU Pipeline starting...");
         gflopsDisplay.innerText = "Waking up GPU...";
-
-        (async () => {
-            try {
-                const adapter = await navigator.gpu.requestAdapter();
-                if (!adapter) throw new Error("No adapter found");
-                // if the f16 adapter exist or not?
-                const requiredFeatures = [];
-                if (adapter.features.has('shader-f16')){
-                    requiredFeatures.push('shader-f16');
-                }
-                const device = await adapter.requestDevice({requiredFeatures});
-                activeGPUDevice = device;
-                
-                const matrixSizes = [256, 512, 1024, 2048, 4096];
-                let performanceData = [];
-                let FinalGFLOPS = 0;
-                
-                for (let size of matrixSizes) {
-                    if (!isEngineRunning) break;
-                    
-                    gflopsDisplay.innerText = `Testing ${size}x${size}...`;
-                    
-                    const resultGflops = await runWebGPU(device, size, userIters, userPrecision, () => isEngineRunning);
-                    
-                    if (!isEngineRunning || resultGflops.gflops === 0) break;
-                    
-                    const currentGflops = resultGflops.gflops;
-                    if (currentGflops > FinalGFLOPS) FinalGFLOPS = currentGflops;
-                    
-                    performanceData.push({matrix: size, gflops: currentGflops});
-                    currentGraphData = performanceData;
-                    plotPerformanceCurve(performanceData);
-
-                    if (resultGflops.timeTakenSec > 1.5){
-                        console.warn(`Matrix ${size} took ${resultGflops.timeTakenSec.toFixed(2)}s. Stopping to prevent crash.`);
-                        break;
-                    }
-                }
-
-                if (isEngineRunning) {
-                    let displaySpeed = "";
-                    displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
-                    gflopsDisplay.innerText = displaySpeed;
-
-                    device.destroy();
-                    activeGPUDevice = null;
-                
-
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    if (!isEngineRunning) return;
-
-                    statusText.innerText = 'Computing ALU Stress Test...'
-                    gflopsDisplay.innerText = 'Computing ALU Stress Test...';
-
-                    const aluAdapter = await navigator.gpu.requestAdapter();
-                    if (!aluAdapter || !isEngineRunning) {
-                        statusText.innerText = 'Completed';
-                        statusText.classList.remove("running");
-                        statusText.classList.add('idle');
-                        stopBtn.classList.add("is-disabled");
-                        isEngineRunning = false;
-                        toggleUILock(false);
-                        return;
-                    }
-                    const aluDevice = await aluAdapter.requestDevice();
-                    activeGPUDevice = aluDevice;
-
-                    if (!isEngineRunning) {
-                        aluDevice.destroy();
-                        activeGPUDevice = null;
-                        return;
-                    }
-                    
-                    let aluResult = [];
-                    const ResultAluGflops = await GPU_ALU(aluDevice, () => isEngineRunning, (gflops) => {
-
-                    let displayText = "";
-                    if (gflops >=1000){
-                        displayText = `${(gflops / 1000).toFixed(2)} TFLOPS`;
-                    }
-                    else {
-                        displayText = `${gflops.toFixed(2)} GFLOPS`;
-                    }
-                    aluResult.push({matrix: null, gflops: gflops});
-                    gflopsDisplay.innerText = displayText;
-                    plotPerformanceCurve(aluResult);
-                    });
-
-                    if (isEngineRunning){
-                        let finalDisplay = "";
-                        if (ResultAluGflops >= 1000){
-                            finalDisplay = `${(ResultAluGflops / 1000).toFixed(2)} TFLOPS`;
-                        }
-                        else{
-                            finalDisplay = `${ResultAluGflops.toFixed(2)} GFLOPS`;
-                        }
-                        gflopsDisplay.innerText = finalDisplay;
-                        statusText.innerText = `Completed`;
-                        statusText.classList.remove("running");
-                        statusText.classList.add('idle');
-                        stopBtn.classList.add("is-disabled");
-                        isEngineRunning = false;
-                        toggleUILock(false);
-                    }
-                }
-            }
-            catch (error) {
-                console.error("GPU Test Failed! Error: ", error);
-                if (isEngineRunning) {
-                    warningMsg.innerText = "GPU Execution Failed!";
-                    warningMsg.classList.add('show-warning');
-                    stopBtn.click();
-                }
-            }
-        })();
+        runGPU();
     }
 });
 
@@ -475,16 +266,16 @@ stopBtn.addEventListener('click', () => {
         setTimeout(() => warningMsg.classList.remove('show-warning'), 2500);
         return;
     }
-    isEngineRunning = false;
+    AppState.isEngineRunning = false;
     toggleUILock(false);
 
-    if (activeGPUDevice) {
-        activeGPUDevice.destroy();
-        activeGPUDevice = null;
+    if (AppState.activeGPUDevice) {
+        AppState.activeGPUDevice.destroy();
+        AppState.activeGPUDevice = null;
         console.log('GPU forcefully terminated due to stop request.');
     }
 
-    if (currentProcessor === 'CPU') {
+    if (AppState.currentProcessor === 'CPU') {
         benchmarkWorker.postMessage({type: 'STOP'});
     }
     else {
@@ -499,7 +290,6 @@ stopBtn.addEventListener('click', () => {
 
 // Processor & GPU detection
 detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg).then((fallbackMsg) => {
-    showGpuFallbackMsg = fallbackMsg;
-
+    AppState.showGpuFallbackMsg = fallbackMsg;
     processorListner();
 });
