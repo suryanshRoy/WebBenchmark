@@ -179,16 +179,19 @@ export async function runGPU() {
 function onFinishManager(onALU, FinalGFLOPS, ResultAluGflops) {
     if (AppState.isEngineRunning) {
         let displaySpeed = "";
-        if (FinalGFLOPS >= 1000) {
-            displaySpeed = `${(FinalGFLOPS / 1000).toFixed(2)} TFLOPS`;
-        } else {
-            displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
-        }
-        if (ResultAluGflops >= 1000 && onALU){
-            displaySpeed = `${(ResultAluGflops / 1000).toFixed(2)} TFLOPS`;
-        }
-        else{
-            displaySpeed = `${ResultAluGflops.toFixed(2)} GFLOPS`;
+        if (onALU) {
+            if (ResultAluGflops >= 1000) {
+                displaySpeed = `${(ResultAluGflops / 1000).toFixed(2)} TFLOPS`;
+            } else {
+                displaySpeed = `${ResultAluGflops.toFixed(2)} GFLOPS`;
+            }
+        } 
+        else {
+            if (FinalGFLOPS >= 1000) {
+                displaySpeed = `${(FinalGFLOPS / 1000).toFixed(2)} TFLOPS`;
+            } else {
+                displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
+            }
         }
         gflopsDisplay.innerText = displaySpeed;
         statusText.innerText = 'Completed';

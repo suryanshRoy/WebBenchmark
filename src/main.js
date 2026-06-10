@@ -34,7 +34,7 @@ export const AppState = { // ai fixed issue
     isEngineReady: false
 };
 
-export function setCurrentProcessor(value) {
+export function setCurrentProcessor(value) { // again ai fixed issue for ES6 or whatever it is
     AppState.currentProcessor = value;
 }
 
