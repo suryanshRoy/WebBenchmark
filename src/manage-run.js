@@ -1,6 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {GPU_ALU, runWebGPU} from "./gpu-engine.js";
-import {computeType, gflopsDisplay, iterInput, toggleUILock, warningMsg, statusText, AppState, stopBtn} from "./main";
+import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.js";
+import {computeType, iterInput, toggleUILock} from "./UI-manager.js";
 
 export const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
 

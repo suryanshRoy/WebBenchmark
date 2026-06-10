@@ -1,5 +1,6 @@
 import * as mainData from './main.js';
-import {updatePreciOption, setCurrentProcessor} from './main.js';
+import {updatePreciOption} from './UI-manager.js';
+import {setCurrentProcessor} from './main.js';
 
 export async function detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg) {
 
