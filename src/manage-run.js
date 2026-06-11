@@ -1,7 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {GPU_ALU, runWebGPU} from "./gpu-engine.js";
 import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.js";
-import {computeType, iterInput, toggleUILock} from "./UI-manager.js";
+import {computeType, iterInput, toggleUILock, showGraphBtn} from "./UI-manager.js";
 
 export const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
 
@@ -45,6 +45,9 @@ export async function runCPU() {
 
     const userIters = parseInt(iterInput.value) || 20;
     const userPrecision = computeType.value;
+    AppState.graphType = [];
+    AppState.currentGraphNum = 0;
+    showGraphBtn(false);
 
     AppState.isEngineRunning = true; 
     toggleUILock(true);
@@ -77,6 +80,11 @@ export async function runCPU() {
                 break;
             }
         }
+        AppState.graphType.push({
+            name: "Matrix",
+             data: [...performanceData]
+            });
+        showGraphBtn(true);
         onFinishManager(false, FinalGFLOPS, 0);
     }
     catch (error) {
@@ -87,6 +95,9 @@ export async function runCPU() {
 export async function runGPU() {
     AppState.isEngineRunning = true; 
     toggleUILock(true);
+    AppState.graphType = [];
+    AppState.currentGraphNum = 0;
+    showGraphBtn(false);
 
     const userIters = parseInt(iterInput.value) || 20;
     const userPrecision = computeType.value;
@@ -127,6 +138,11 @@ export async function runGPU() {
             }
         }
 
+        AppState.graphType.push({
+            name: "Matrix",
+             data: [...performanceData]
+        })
+
         if (AppState.isEngineRunning) {
             let displaySpeed = "";
             displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
@@ -165,10 +181,17 @@ export async function runGPU() {
                 displayText = `${gflops.toFixed(2)} GFLOPS`;
             }
             aluResult.push({matrix: null, gflops: gflops});
+            AppState.currentGraphData = aluResult;
             gflopsDisplay.innerText = displayText;
             plotPerformanceCurve(aluResult);
             });
 
+            AppState.graphType.push({
+                name: "ALU", 
+                data: [...aluResult]
+            });
+            AppState.currentGraphNum = AppState.graphType.length - 1;
+            AppState.currentGraphData = [...aluResult];
             onFinishManager(true, FinalGFLOPS, ResultAluGflops);
         }
     }
@@ -201,6 +224,7 @@ function onFinishManager(onALU, FinalGFLOPS, ResultAluGflops) {
         stopBtn.classList.add("is-disabled");
         AppState.isEngineRunning = false;
         toggleUILock(false);
+        showGraphBtn(true);
     }
 }
 

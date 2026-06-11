@@ -20,6 +20,8 @@ export const AppState = { // ai fixed issue
     showGpuFallbackMsg: true,
     activeGPUDevice: null,
     currentGraphData: [],
+    graphType: [],
+    currentGraphNum: 0,
     isEngineRunning: false,
     isEngineReady: false
 };

@@ -35,7 +35,7 @@
 
                 <div class="header-main">
                     <h1 class="animated-gradient-text">WebBenchmark!</h1>
-                    <p class="subtitle">Client-Side WASM Hardware Profile</p>
+                    <p class="subtitle">Benchmark your web browser's performance</p>
                 </div>
             </header>
 
@@ -78,7 +78,7 @@
                 </section>
 
                 <div class="dashboard">
-                    <!-- Metrics Panel -->
+                    <!-- Metrics result Panel -->
                     <aside class = "metrics-panel">
                         <div class="metric-box">
                             <h3>Status</h3>
@@ -111,7 +111,7 @@
                         </div>
                     </aside>
 
-                    <!-- Graphs Grid -->
+                    <!-- Graph container -->
                     <section class="visualizer-panel">
                         <div class="visualizer-header">
                             <h2>Live Performance Graphs</h2>
@@ -120,6 +120,12 @@
                             <div class="canvas-container">
                                 <canvas id="gflops-canvas"></canvas>
                                 <div class="placeholder-text">Awaiting CPU Matrix...</div>
+                                <button type="button" title="Show previous performance graph" class="arrow-btn left-btn hidden" id="prev-btn">
+                                    <span class="arrow left-arrow"></span>
+                                </button>
+                                <button type="button" title="Show next performance graph" class="arrow-btn right-btn hidden" id="next-btn">
+                                    <span class="arrow right-arrow"></span>
+                                </button>
                             </div>
                             <div class="canvas-container blank-graph">
                                 <div class="placeholder-text">Awaiting Memory Test...</div>

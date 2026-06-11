@@ -16,10 +16,47 @@ export const simdCheckbox = document.getElementById('simd-checkbox');
 export const computeType = document.getElementById('compute-type');
 export const iterInput = document.getElementById("iter-input");
 
+// Btns for graphs
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+
 function toggleSidebar() {
     sidebar.classList.toggle('closed');
     sidebarOverlay.classList.toggle('active');
 }
+
+export function showGraphBtn(showGraph){
+    if (!prevBtn || !nextBtn) return;
+    if (showGraph && AppState.graphType.length > 1) {
+        prevBtn.classList.remove('hidden');
+        nextBtn.classList.remove('hidden');
+    }
+    else {
+        prevBtn.classList.add('hidden');
+        nextBtn.classList.add('hidden');
+    }
+}
+
+function changeGraphNum(moveGraph){
+    if (AppState.graphType.length <= 1) return;
+    AppState.currentGraphNum += moveGraph;
+    if (AppState.currentGraphNum < 0) {
+        AppState.currentGraphNum = AppState.graphType.length - 1;
+    }
+    else if (AppState.currentGraphNum >= AppState.graphType.length) {
+        AppState.currentGraphNum = 0;
+    }
+
+    const activeGraph = AppState.graphType[AppState.currentGraphNum];
+    AppState.currentGraphData = activeGraph.data;
+    
+    plotPerformanceCurve(AppState.currentGraphData);
+}
+if (prevBtn && nextBtn) {
+    prevBtn.addEventListener('click', () => changeGraphNum(-1));
+    nextBtn.addEventListener('click', () => changeGraphNum(1));
+}
+
 
 export function updatePreciOption() {
     computeType.innerHTML = '';

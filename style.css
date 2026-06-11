@@ -377,6 +377,67 @@ body.light-mode {
 .icon-btn svg {
     stroke: var(--text-main);
 } 
+
+.arrow-btn {
+    position: absolute;
+    top: 50%;                   
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background-color: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0px 4px 6px rgba(5, 162, 110, 0.837);
+    z-index: 10;
+    opacity: 0.4;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+}
+
+body.light-mode .arrow-btn{
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.978);
+}
+
+.arrow-btn:hover {
+    border-color: var(--accent);
+}
+
+.arrow-btn:active {
+    transform: translateY(-50%) scale(0.9);
+}
+
+.left-btn {
+    left: -17px; 
+}
+.right-btn {
+    right: -17px; 
+}
+
+.arrow {
+    border: solid var(--text-main);
+    border-width: 0 3px 3px 0;
+    display: inline-block;
+    padding: 4px;
+    transition: border-color 0.2s ease;
+}
+
+.arrow-btn:hover .arrow {
+    border-color: var(--accent);
+}
+
+.left-arrow { 
+    transform: rotate(135deg); 
+    margin-left: 3px; 
+}
+
+.right-arrow { 
+    transform: rotate(-45deg); 
+    margin-right: 3px; 
+}
+
 /* Visualizer Panel */
 .visualizer-panel {
     background-color: var(--panel-bg);
@@ -407,7 +468,7 @@ body.light-mode {
     position: relative;
     border: 1px dashed var(--border-color);
     border-radius: 4px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #gflops-canvas {
