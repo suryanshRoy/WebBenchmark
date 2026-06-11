@@ -393,7 +393,7 @@ body.light-mode {
     align-items: center;
     box-shadow: 0px 4px 6px rgba(5, 162, 110, 0.837);
     z-index: 10;
-    opacity: 0.4;
+    opacity: 0.5;
     transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
 }
 

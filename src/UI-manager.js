@@ -51,12 +51,23 @@ function changeGraphNum(moveGraph){
     AppState.currentGraphData = activeGraph.data;
     
     plotPerformanceCurve(AppState.currentGraphData);
+
+   const resultText = document.getElementsByClassName('.metric-box h3');
+   const displayText = document.getElementById("gflops-current");
+   if (resultText && displayText) {
+        const maxGflops = Math.max(...activeGraph.data.map(item => item.gflops || 0));
+        if (maxGflops >= 1000) {
+            displayText.innerText = `${(maxGflops / 1000).toFixed(2)} TFLOPS`;
+        } else {
+            displayText.innerText = `${maxGflops.toFixed(2)} GFLOPS`;
+        }
+   }
 }
+
 if (prevBtn && nextBtn) {
     prevBtn.addEventListener('click', () => changeGraphNum(-1));
     nextBtn.addEventListener('click', () => changeGraphNum(1));
 }
-
 
 export function updatePreciOption() {
     computeType.innerHTML = '';
