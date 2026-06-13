@@ -23,6 +23,9 @@ const nextBtn = document.getElementById('next-btn');
 function toggleSidebar() {
     sidebar.classList.toggle('closed');
     sidebarOverlay.classList.toggle('active');
+    
+    // Add this line to trigger the CSS morph animation!
+    menuBtn.classList.toggle('open'); 
 }
 
 export function showGraphBtn(showGraph){

@@ -1,7 +1,7 @@
 /* Variables */
 :root {
-    --bg-color: rgb(18,18,18);
-    --panel-bg: rgb(30,30,30);
+    --bg-color: rgb(0, 0, 0);
+    --panel-bg: rgb(10, 10, 10);
     --text-main: rgb(224,224,224);
     --text-muted: rgb(136,136,136);
     --border-color:rgb(51,51,51);
@@ -30,8 +30,8 @@ body {
 
 /* Light Mode */
 body.light-mode {
-    --bg-color: rgb(235, 238, 242); 
-    --panel-bg: rgb(248, 249, 250);
+    --bg-color: rgb(249, 249, 249); 
+    --panel-bg: rgb(250, 250, 250);
     --text-main: rgb(30, 35, 40);
     --text-muted: rgb(100, 105, 110);
     --border-color: rgb(200, 205, 212);
@@ -131,8 +131,8 @@ body.light-mode {
     padding-bottom: 3rem;
 }
 
-/* Full Width Header & Text Animation */
-.full-width-header {
+/* Menu & Text Animation */
+.menu-header {
     width: 100%;
     border-bottom: 1px solid var(--border-color);
     padding: 2rem 0;
@@ -144,10 +144,44 @@ body.light-mode {
 }
 
 .floating-menu-btn {
-    position: absolute;
+    position: fixed; /* MAGIC BULLET: Detaches it from the layout so it NEVER clips */
+    top: 1.5rem;
     left: 1.5rem;
-    top: 50%;
-    transform: translateY(-50%);
+    z-index: 100; /* Stays above the dark overlay (40) and sidebar (50) */
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 2. Slide to the top-right of the sidebar when opened */
+.floating-menu-btn.open {
+    left: 200px; /* Sidebar is 260px. This docks the button perfectly on its right edge. */
+}
+
+/* 3. The Sleek Bars */
+.bar {
+    width: 20px;
+    height: 2px;
+    background-color: var(--text-main);
+    border-radius: 2px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+/* 4. The Perfect "X" Morph (Translates first, THEN rotates) */
+.floating-menu-btn.open .bar1 {
+    transform: translateY(7px) rotate(45deg);
+    background-color: var(--accent); /* Makes the X cyan like your drawing! */
+}
+.floating-menu-btn.open .bar2 {
+    opacity: 0; /* Hides middle line smoothly */
+}
+.floating-menu-btn.open .bar3 {
+    transform: translateY(-7px) rotate(-45deg);
+    background-color: var(--accent);
 }
 
 .header-main {
@@ -238,7 +272,7 @@ body.light-mode {
 
 .ai-chat-input {
     width: 100%;
-    background-color: var(--panel-bg);
+    background-color: var(--bg-color);
     border: 1px solid var(--border-color);
     color: var(--text-main);
     padding: 1rem 3.5rem 1rem 1.5rem; 
@@ -251,7 +285,7 @@ body.light-mode {
 .ai-chat-input:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(0, 255, 204, 0.2);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
 .ai-chat-send-btn {
@@ -531,9 +565,9 @@ body.light-mode .arrow-btn{
 }
 
 body.light-mode .hardware-dd-container {
-    background: rgb(248, 248, 241);
+    background: rgb(250, 250, 250);
     border: 1px solid var(--border-color);
-    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 0.2px 0.5px rgba(0, 0, 0, 0.85);
 }
 
 body.light-mode .dd-label {
@@ -676,9 +710,12 @@ body.light-mode .dd-label {
 
 @media (max-width: 850px) {
     .dashboard {grid-template-columns: 1fr; }
-    .full-width-header {padding: 1.5rem 0; }
+    .main-header {padding: 1.5rem 0; }
     .animated-gradient-text {font-size: 2rem; }
     .floating-menu-btn {left: 1rem; }
+    .floating-menu-btn.open {
+        left: calc(min(260px, 60%) - 3.5rem); 
+    }
     
     .sidebar {
         position: absolute;
