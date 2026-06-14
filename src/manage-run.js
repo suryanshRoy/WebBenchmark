@@ -70,11 +70,9 @@ export async function runCPU() {
                 FinalGFLOPS =  result.gflops;
             }
 
-            if (performanceData.length > 0){
             performanceData.push({matrix: size, gflops: result.gflops});
             AppState.currentGraphData = performanceData;
             plotPerformanceCurve(performanceData);
-            }
             // REVIEW: May require some changes
             const nextEstimatedTime = result.timeTakenSec * 8.0;
             if (nextEstimatedTime > 6.0) {
@@ -196,6 +194,13 @@ export async function runGPU() {
             AppState.currentGraphNum = AppState.graphType.length - 1;
             AppState.currentGraphData = [...aluResult];
             onFinishManager(true, FinalGFLOPS, ResultAluGflops);
+        }
+        else if (AppState.isEngineRunning) {
+            if (AppState.activeGPUDevice) {
+                AppState.activeGPUDevice.destroy();
+                AppState.activeGPUDevice = null;
+            }
+            onFinishManager(false, FinalGFLOPS, 0);
         }
     }
     catch (error) {
