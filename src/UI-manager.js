@@ -255,6 +255,8 @@ export function toggleUILock(isLocked){
         aluTestCB.disabled = processorSelect.value === "CPU" // enable alu if CPU isn't selected
     }
 
+    aluTestCB.disabled = isLocked;
+
     const iterArrows = document.querySelector('.iter-arrow');
     if (iterArrows) {
         iterArrows.style.pointerEvents = isLocked ? 'none' : 'auto';

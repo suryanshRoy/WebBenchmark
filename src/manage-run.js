@@ -80,11 +80,14 @@ export async function runCPU() {
                 break;
             }
         }}
-        AppState.graphType.push({
-            name: "Matrix",
-             data: [...performanceData]
+
+        if (performanceData.length > 0) {
+            AppState.graphType.push({
+                name: "Matrix",
+                data: [...performanceData]
             });
-        showGraphBtn(true);
+            showGraphBtn(true);
+        }
         onFinishManager(false, FinalGFLOPS, 0);
     }
     catch (error) {
@@ -117,32 +120,34 @@ export async function runGPU() {
         let FinalGFLOPS = 0;
         
         if (matTestCB.checked){
-        for (let size of matrixSizes) {
-            if (!AppState.isEngineRunning) break;
-            
-            gflopsDisplay.innerText = `Testing ${size}x${size}...`;
-            
-            const resultGflops = await runWebGPU(device, size, userIters, userPrecision, () => AppState.isEngineRunning);
-            
-            if (!AppState.isEngineRunning || resultGflops.gflops === 0) break;
-            
-            const currentGflops = resultGflops.gflops;
-            if (currentGflops > FinalGFLOPS) FinalGFLOPS = currentGflops;
-            
-            performanceData.push({matrix: size, gflops: currentGflops});
-            AppState.currentGraphData = performanceData;
-            plotPerformanceCurve(performanceData);
+            for (let size of matrixSizes) {
+                if (!AppState.isEngineRunning) break;
+                
+                gflopsDisplay.innerText = `Testing ${size}x${size}...`;
+                
+                const resultGflops = await runWebGPU(device, size, userIters, userPrecision, () => AppState.isEngineRunning);
+                
+                if (!AppState.isEngineRunning || resultGflops.gflops === 0) break;
+                
+                const currentGflops = resultGflops.gflops;
+                if (currentGflops > FinalGFLOPS) FinalGFLOPS = currentGflops;
+                
+                performanceData.push({matrix: size, gflops: currentGflops});
+                AppState.currentGraphData = performanceData;
+                plotPerformanceCurve(performanceData);
 
-            if (resultGflops.timeTakenSec > 1.5){
-                console.warn(`Matrix ${size} took ${resultGflops.timeTakenSec.toFixed(2)}s. Stopping to prevent crash.`);
-                break;
+                if (resultGflops.timeTakenSec > 1.5){
+                    console.warn(`Matrix ${size} took ${resultGflops.timeTakenSec.toFixed(2)}s. Stopping to prevent crash.`);
+                    break;
+                }
             }
-        }}
-
-        AppState.graphType.push({
-            name: "Matrix",
-             data: [...performanceData]
-        })
+            if (performanceData.length > 0){
+                AppState.graphType.push({
+                name: "Matrix",
+                data: [...performanceData]
+                });
+            }
+        }
 
         if (AppState.isEngineRunning && aluTestCB.checked) {
             let displaySpeed = "";
