@@ -17,7 +17,8 @@
 
 /* Smoooth Transition */
 body, .metric-box, .Graph-panel, h1, h2, h3, p, span, .btn, .sidebar, .test-selector-panel {
-    margin: 0; padding: 0; 
+    margin: 0; 
+    padding: 0; 
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
@@ -129,7 +130,7 @@ body.light-mode {
 .container {
     width: 90%;
     max-width: 1200px; 
-    padding-bottom: 3rem;
+    padding-bottom: 2rem;
 }
 
 /* Menu & Text Animation */
@@ -274,7 +275,7 @@ body.light-mode {
 
 .test-selector-panel {
     background-color: var(--panel-bg);
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 8px;
     border: 1px solid var(--border-color);
     margin-bottom: 1.5rem;
@@ -429,17 +430,18 @@ input:checked + .slider:before {
     display: grid;
     grid-template-columns: 1fr 2fr;
     gap: 2rem;
+    align-items: start;
 }
 
 .metrics-panel {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem; 
+    gap: 1.4rem; 
 }
 
 .metric-box {
     background-color: var(--panel-bg);
-    padding: 1.5rem;
+    padding: 0.8rem;
     border-radius: 8px;
     border: 1px solid var(--border-color);
 }
@@ -586,6 +588,8 @@ body.light-mode .arrow-btn{
 
 /* Graph Panel */
 .Graph-panel {
+    align-self: start;
+    height: fit-content;
     background-color: var(--panel-bg);
     border-radius: 8px;
     border: 1px solid var(--border-color);
@@ -599,14 +603,16 @@ body.light-mode .arrow-btn{
 }
 
 .Graph-header h2 {
-    font-size: 1.2rem;
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    font-weight: bold;
 }
 
 .graphs-grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 1rem;
-    padding: 1rem;
+    padding: 2rem;
 }
 
 .canvas-container {
@@ -624,10 +630,6 @@ body.light-mode .arrow-btn{
     top: 0;
     left: 0;
     z-index: 5; 
-}
-
-.blank-graph {
-    background-color: rgba(0,0,0,0.1); 
 }
 
 .placeholder-text {

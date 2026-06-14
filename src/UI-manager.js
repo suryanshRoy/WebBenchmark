@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(() => {
         const cores = navigator.hardwareConcurrency || 'Unknown';
-        document.getElementById('core-count').innerText = `${cores} Threads Available`;
+        document.getElementById('core-count').innerText = `${cores} Threads`;
     }, 800);
 });
 simdCheckbox.addEventListener('change', (e)=> {
