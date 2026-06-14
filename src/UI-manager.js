@@ -185,8 +185,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // savedPrecision defined before cause it gets overwrite by simd
     const savedPrecision = localStorage.getItem("benchmark_precision");
-    const savedSimd = localStorage.getItem("benchmark_simd") === "true";
+    const storedSimd = localStorage.getItem("benchmark_simd") || 'true'; // default to true on first visit
+    const savedSimd = storedSimd === 'true';
     simdCheckbox.checked = savedSimd;
+
+    const savedMatTest = localStorage.getItem("benchmark_mat_test");
+    if (savedMatTest !== null) {
+        matTestCB.checked = savedMatTest === 'true';
+    }
+
+    const savedAluTest = localStorage.getItem("benchmark_alu_test");
+    if (savedAluTest !== null) {
+        aluTestCB.checked = savedAluTest === 'true';
+    }
     updatePreciOption();
 
     if (savedPrecision) {
@@ -202,6 +213,14 @@ document.addEventListener('DOMContentLoaded', () => {
 simdCheckbox.addEventListener('change', (e)=> {
     localStorage.setItem('benchmark_simd', e.target.checked);
     updatePreciOption();
+});
+
+matTestCB.addEventListener('change', (e) => {
+    localStorage.setItem('benchmark_mat_test', e.target.checked);
+});
+
+aluTestCB.addEventListener('change', (e) => {
+    localStorage.setItem('benchmark_alu_test', e.target.checked);
 });
 
 computeType.addEventListener('change', (e) => {
