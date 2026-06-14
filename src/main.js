@@ -1,7 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {detectUserGPU, processorListner} from "./processorManager.js";
 import {runCPU, runGPU, benchmarkWorker} from "./manage-run.js";
-import {toggleUILock} from "./UI-manager.js";
+import {toggleUILock, matTestCB, aluTestCB} from "./UI-manager.js";
 
 //  btn and warning elements
 export const startBtn = document.getElementById('start-btn');
@@ -10,7 +10,7 @@ export const statusText = document.getElementById('status-text');
 export const warningMsg = document.getElementById('warning-msg');
 
 // Processor & GPU variables
-export const processorSelect = document.getElementById('processor-select');
+export const processorSelect = document.getElementById('select-processor');
 const optGPU = document.getElementById('opt-GPU');
 export const gpuWarnMsg = document.getElementById('gpu-warning-msg');
 export const cpuWarnMsg = document.getElementById('cpu-warning-msg');
@@ -44,6 +44,13 @@ export const gflopsDisplay = document.getElementById('gflops-current');
 
 // Start Button Control!!!
 startBtn.addEventListener('click', () => {
+    if (!matTestCB.checked && !aluTestCB.checked) {
+        warningMsg.innerText = "Please select at least one test to run!";
+        warningMsg.classList.add('show-warning');
+        setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
+        return;
+    }
+
     if (AppState.currentProcessor === 'CPU' && !AppState.isEngineReady) {
         warningMsg.innerText = "Error: CPU WASM not compiled yet!";
         warningMsg.classList.add('show-warning');

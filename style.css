@@ -16,7 +16,7 @@
 }
 
 /* Smoooth Transition */
-body, .metric-box, .visualizer-panel, h1, h2, h3, p, span, .btn, .sidebar, .test-selector-panel {
+body, .metric-box, .Graph-panel, h1, h2, h3, p, span, .btn, .sidebar, .test-selector-panel {
     margin: 0; padding: 0; 
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
@@ -84,7 +84,8 @@ body.light-mode {
 
 .sidebar-label {
     font-weight: 600; 
-    font-size: 1.1rem; 
+    font-size: 1.25rem; 
+    transform: translateX(-2px);
     color: var(--text-main); 
     padding: 0.5rem 1rem;
 }
@@ -144,10 +145,10 @@ body.light-mode {
 }
 
 .floating-menu-btn {
-    position: fixed; /* MAGIC BULLET: Detaches it from the layout so it NEVER clips */
+    position: fixed;
     top: 1.5rem;
     left: 1.5rem;
-    z-index: 100; /* Stays above the dark overlay (40) and sidebar (50) */
+    z-index: 100;
     
     display: flex;
     flex-direction: column;
@@ -157,12 +158,10 @@ body.light-mode {
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 2. Slide to the top-right of the sidebar when opened */
 .floating-menu-btn.open {
-    left: 200px; /* Sidebar is 260px. This docks the button perfectly on its right edge. */
+    left: 200px;
 }
 
-/* 3. The Sleek Bars */
 .bar {
     width: 20px;
     height: 2px;
@@ -171,13 +170,12 @@ body.light-mode {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
 }
 
-/* 4. The Perfect "X" Morph (Translates first, THEN rotates) */
 .floating-menu-btn.open .bar1 {
     transform: translateY(7px) rotate(45deg);
-    background-color: var(--accent); /* Makes the X cyan like your drawing! */
+    background-color: var(--accent); 
 }
 .floating-menu-btn.open .bar2 {
-    opacity: 0; /* Hides middle line smoothly */
+    opacity: 0;
 }
 .floating-menu-btn.open .bar3 {
     transform: translateY(-7px) rotate(-45deg);
@@ -205,7 +203,7 @@ body.light-mode {
     
     animation: gradient-shift 12s ease infinite; 
     padding-bottom: 5px;
-    /* To Do */
+    /* TODO change it to ensure that the background shadow is not static red but changing with the color of WebBenchmark! */
     filter: drop-shadow(0 0 10px rgba(255, 60, 80, 0.4));
 }
 
@@ -215,12 +213,63 @@ body.light-mode {
     100% {background-position: 0% 50%; }
 }
 
+.panel-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor:pointer;
+    user-select: none;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.chevron-icon {
+    width: 24px;
+    height: 24px;
+    stroke: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.chevron-icon.up {
+    transform: rotate(180deg); 
+}
+
+.panel-content {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    margin-top: 0.3rem ease;
+    max-height: 800px;
+    opacity: 1; /* default open state opacity */
+}
+
+.panel-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+    pointer-events: none;
+}
+
 .subtitle {
     margin-top: 8px;
     color: var(--text-main); 
     font-weight: 500;
     font-size: 1.1rem;
     letter-spacing: 1px;
+}
+
+.test-group {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .test-selector-panel {
@@ -241,16 +290,79 @@ body.light-mode {
 
 .test-checkbox {
     cursor: pointer; 
-    display: flex; align-items: 
-    center; gap: 0.5rem; 
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; 
     font-size: 0.95rem; 
 }
 .test-checkbox input {
     accent-color: var(--accent);
-    width: 16px; height: 16px; 
+    width: 16px;
+    height: 16px; 
 }
 .test-checkbox input[disabled] {
-    cursor: not-allowed; opacity: 0.5; 
+    cursor: not-allowed;
+    opacity: 0.5; 
+}
+
+.advanced-set-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-weight: light;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 22px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--border-color);
+    transition: background-color 0.2s ease;
+    border-radius: 22px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--bg-color);
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--accent);
+}
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+.adv-set-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: opacity 0.3s ease;
 }
 
 .benchmark-configs {
@@ -262,7 +374,7 @@ body.light-mode {
     border-top: 1px solid var(--border-color);
 }
 
-/* --- Mark AI Chat Panel --- */
+/* ------- Mark AI Chat Panel ------ */
 .ai-chat-panel {
     position: relative;
     margin-bottom: 2rem;
@@ -472,8 +584,8 @@ body.light-mode .arrow-btn{
     margin-right: 3px; 
 }
 
-/* Visualizer Panel */
-.visualizer-panel {
+/* Graph Panel */
+.Graph-panel {
     background-color: var(--panel-bg);
     border-radius: 8px;
     border: 1px solid var(--border-color);
@@ -481,12 +593,12 @@ body.light-mode .arrow-btn{
     flex-direction: column;
 }
 
-.visualizer-header {
+.Graph-header {
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
 }
 
-.visualizer-header h2 {
+.Graph-header h2 {
     font-size: 1.2rem;
 }
 
@@ -582,7 +694,7 @@ body.light-mode .dd-label {
     letter-spacing: 1px;
 }
 
-#processor-select, #compute-type, #iter-input {
+#select-processor, #compute-type, #iter-input {
     background-color: var(--panel-bg);
     color: var(--accent);
     border: 1px solid var(--border-color);
@@ -606,14 +718,14 @@ body.light-mode .dd-label {
     transition: --border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-#processor-select:hover, #processor-select:focus,
+#select-processor:hover, #select-processor:focus,
 #compute-type:hover, #compute-type:focus, 
 #iter-input:hover #iter-input:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.598);
 }
 
-#processor-select, #compute-type {
+#select-processor, #compute-type {
     background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ffcc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
@@ -652,7 +764,7 @@ body.light-mode .dd-label {
     color: rgba(32, 127, 243, 0.7)
 }
 
-#processor-select option, #compute-type option {
+#select-processor option, #compute-type option {
     background-color: var(--panel-bg);
     color: var(--text-main);
 }

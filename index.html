@@ -16,7 +16,7 @@
             <div class="sidebar-top">
                 <p class="sidebar-label">History</p>
             </div>
-            
+
             <div class="sidebar-bottom">
                 <button id="settings-open-btn" class="sidebar-set-btn">Settings</button>
             </div>
@@ -32,37 +32,67 @@
 
                 <div class="header-main">
                     <h1 class="animated-gradient-text">WebBenchmark!</h1>
-                    <p class="subtitle">Benchmark your web browser's performance</p>
+                    <p class="subtitle">Benchmark your web's performance</p>
                 </div>
             </header>
 
             <div class="container">
                 <section class="test-selector-panel">
-                    <h3>Benchmark Settings</h3>
-                    <div class="test-options">
-                        <label class="test-checkbox"><input type="checkbox" id="simd-checkbox">SIMD Compute</label>
-                        <div class="benchmark-configs"></div>
-                        <div class="hardware-dd-container" style="margin-top: 0;">
-                            <label for="iter-input" class="dd-label">Iterations:</label>
-                            <input type="number" id="iter-input" min="1" max="99" value="20">
-                            <div class="iter-arrow">
-                                <svg id="iter-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="18 15 12 9 6 15"></polyline>
-                                </svg>
-                                <svg id="iter-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
+                    <div class="panel-header" id="set-panel-header" title="Toggle Benchmark Settings">
+                        <h3>Benchmark Settings</h3>
+                        <!-- Chevron Icon -->
+                        <svg id="set-chevron" class="chevron-icon up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 15 12 9 18 15"></polyline>
+                        </svg>
+                    </div>
+
+                    <div class="panel-content" id="set-panel-content">
+                        <div class="test-group">
+                            <label class="test-checkbox">
+                                <input type="checkbox" id="mat-test-checkbox" checked> Matrix FLOPS Test
+                            </label>
+                            <label class="test-checkbox">
+                                <input type="checkbox" id="alu-test-checkbox" checked> ALU Compute Test
+                            </label>
+                            <label class="test-checkbox">
+                                <input type="checkbox" disabled> Memory Bandwidth <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span>
+                            </label>
+                            <label class="test-checkbox">
+                                <input type="checkbox" disabled> AI Running test <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span>
+                            </label>
+                        </div>
+
+                        <div class="advanced-set-toggle" id="advanced-set-id">
+                            <span>Advanced Settings</span>
+                            <svg id="adv-chevron" class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                            <div class="adv-set-container hidden" id="adv-set-container">
+                                <div class="test-options">
+                            <label class="test-checkbox"><input type="checkbox" id="simd-checkbox">SIMD Compute</label>
+                            <div class="benchmark-configs"></div>
+                            <div class="hardware-dd-container" style="margin-top: 0;">
+                                <label for="iter-input" class="dd-label">Iterations:</label>
+                                <input type="number" id="iter-input" min="1" max="99" value="20">
+                                <div class="iter-arrow">
+                                    <svg id="iter-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="18 15 12 9 6 15"></polyline>
+                                    </svg>
+                                    <svg id="iter-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="hardware-dd-container" style="margin-top: 0;">
+                                <label for="compute-type" class="dd-label">Precision:</label>
+                                <select id="compute-type">
+                                    <option value="f32-scalar">F32 Scalar</option>
+                                    <option value="f16-scalar">F16 Scalar</option>
+                                </select>
                             </div>
                         </div>
-                        <div class="hardware-dd-container" style="margin-top: 0;">
-                            <label for="compute-type" class="dd-label">Precision:</label>
-                            <select id="compute-type">
-                                <option value="f32-scalar">F32 Scalar</option>
-                                <option value="f16-scalar">F16 Scalar</option>
-                            </select>
                         </div>
-                        <label class="test-checkbox"><input type="checkbox" disabled> Memory Bandwidth <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
-                        <label class="test-checkbox"><input type="checkbox" disabled> AI Running test <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span></label>
                     </div>
                 </section>
                 
@@ -70,7 +100,9 @@
                 <section class="ai-chat-panel">
                     <input type="text" class="ai-chat-input" placeholder="Ask Mark AI about your system performance...">
                     <button class="ai-chat-send-btn" title="Send to Mark AI">
-                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                        <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 24 24" fill="none" 
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line>
+                        <polyline points="5 12 12 5 19 12"></polyline></svg>
                     </button>
                 </section>
 
@@ -96,8 +128,8 @@
                                 <button id="stop-btn" class="btn secondary is-disabled">Stop</button>
                             </div>
                             <div class="hardware-dd-container">
-                                <label for="processor-select" class="dd-label">Processor:</label>
-                                <select id="processor-select" class="btn-label">
+                                <label for="select-processor" class="dd-label">Processor:</label>
+                                <select id="select-processor" class="btn-label">
                                     <option value="GPU" id="opt-GPU">GPU (Detecting...)</option>
                                     <option value="CPU" id="opt-cpu">CPU</option>
                                 </select>
@@ -109,8 +141,8 @@
                     </aside>
 
                     <!-- Graph container -->
-                    <section class="visualizer-panel">
-                        <div class="visualizer-header">
+                    <section class="Graph-panel">
+                        <div class="Graph-header">
                             <h2>Live Performance Graphs</h2>
                         </div>
                         <div class="graphs-grid">

@@ -15,6 +15,26 @@ const themeToggleBtn = document.getElementById('theme-toggle-btn');
 export const simdCheckbox = document.getElementById('simd-checkbox');
 export const computeType = document.getElementById('compute-type');
 export const iterInput = document.getElementById("iter-input");
+export const matTestCB = document.getElementById("mat-test-checkbox");
+export const aluTestCB = document.getElementById("alu-test-checkbox");
+
+const panelHeader = document.getElementById('set-panel-header');
+const panelContent = document.getElementById('set-panel-content');
+const chevronIcon = document.getElementById('set-chevron');
+
+const advSettingsToggle = document.getElementById('advanced-set-id');
+const advChevronIcon = document.getElementById('adv-chevron');
+const advSettingsContainer = document.getElementById('adv-set-container');
+
+panelHeader.addEventListener('click', () => {
+    panelContent.classList.toggle('collapsed');
+    chevronIcon.classList.toggle('up');
+});
+
+advSettingsToggle.addEventListener('click', () => {
+    advSettingsContainer.classList.toggle('hidden');
+    advChevronIcon.classList.toggle('up');
+});
 
 // Btns for graphs
 const prevBtn = document.getElementById('prev-btn');
@@ -218,11 +238,23 @@ iterDown.addEventListener('click', () => {
     }
 });
 
+// prevent user from changing settings while benchmark is running
 export function toggleUILock(isLocked){
     iterInput.disabled = isLocked;
     computeType.disabled = isLocked;
     processorSelect.disabled = isLocked;
     simdCheckbox.disabled = isLocked;
+
+    matTestCB.disabled = isLocked;
+    advSettingsToggle.disabled = isLocked;
+
+    if (isLocked) {
+        aluTestCB.disabled = true; // disable alu when running
+    }
+    else {
+        aluTestCB.disabled = processorSelect.value === "CPU" // enable alu if CPU isn't selected
+    }
+
     const iterArrows = document.querySelector('.iter-arrow');
     if (iterArrows) {
         iterArrows.style.pointerEvents = isLocked ? 'none' : 'auto';
