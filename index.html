@@ -68,30 +68,46 @@
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </div>
-                            <div class="adv-set-container hidden" id="adv-set-container">
-                                <div class="test-options">
-                            <label class="test-checkbox"><input type="checkbox" id="simd-checkbox">SIMD Compute</label>
-                            <div class="benchmark-configs"></div>
-                            <div class="hardware-dd-container" style="margin-top: 0;">
-                                <label for="iter-input" class="dd-label">Iterations:</label>
-                                <input type="number" id="iter-input" min="1" max="99" value="20">
-                                <div class="iter-arrow">
-                                    <svg id="iter-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="18 15 12 9 6 15"></polyline>
-                                    </svg>
-                                    <svg id="iter-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
+
+                        <div class="adv-set-container hidden" id="adv-set-container">
+                            <div class="test-options">
+                                <label class="test-checkbox"><input type="checkbox" id="simd-checkbox">SIMD Compute</label>
+                                <div class="benchmark-configs"></div>
+                                <div class="hardware-dd-container" style="margin-top: 0;">
+                                    <label for="iter-input" class="dd-label">Iterations:</label>
+                                    <input type="number" id="iter-input" min="1" max="99" value="20">
+                                    <div class="iter-arrow">
+                                        <svg id="iter-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="18 15 12 9 6 15"></polyline>
+                                        </svg>
+                                        <svg id="iter-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                <div class="hardware-dd-container" style="margin-top: 0;">
+                                    <label for="compute-type" class="dd-label">Precision:</label>
+                                    <select id="compute-type">
+                                        <option value="f32-scalar">F32 Scalar</option>
+                                        <option value="f16-scalar">F16 Scalar</option>
+                                    </select>
+                                </div>
+
+                                <div class="hardware-dd-container" style="margin-top: 0;">
+                                    <label for="matrix-size" class="dd-label">Matrix Size:</label>
+                                    <select id="matrix-size">
+                                        <option value="default">Default(256-4096)</option>
+                                        <option value="256">256 × 256</option>
+                                        <option value="512">512 × 512</option>
+                                        <option value="1024">1024 × 1024</option>
+                                        <option value="2048">2048 × 2048</option>
+                                        <option value="4096">4096 × 4096</option>
+                                        <option value="8192">8192 × 8192</option>
+                                        <option value="16384">16384 × 16384</option>
+                                    </select>
                                 </div>
                             </div>
-                            <div class="hardware-dd-container" style="margin-top: 0;">
-                                <label for="compute-type" class="dd-label">Precision:</label>
-                                <select id="compute-type">
-                                    <option value="f32-scalar">F32 Scalar</option>
-                                    <option value="f16-scalar">F16 Scalar</option>
-                                </select>
-                            </div>
-                        </div>
                         </div>
                     </div>
                 </section>

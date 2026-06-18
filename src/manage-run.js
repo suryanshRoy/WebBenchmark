@@ -1,7 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {GPU_ALU, runWebGPU} from "./gpu-engine.js";
 import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.js";
-import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB} from "./UI-manager.js";
+import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize} from "./UI-manager.js";
 
 export const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
 
@@ -53,7 +53,10 @@ export async function runCPU() {
     toggleUILock(true);
 
     try {
-        const matrixSize = [256, 512, 1024, 2048, 4096];
+        let matrixSize = [256, 512, 1024, 2048, 4096];
+        if (matSize.value !== "default") {
+            matrixSize = [parseInt(matSize.value)];
+        }
         let performanceData = [];
         let FinalGFLOPS = 0;
 
@@ -115,7 +118,10 @@ export async function runGPU() {
         const device = await adapter.requestDevice({requiredFeatures});
         AppState.activeGPUDevice = device;
         
-        const matrixSizes = [256, 512, 1024, 2048, 4096];
+        let matrixSizes = [256, 512, 1024, 2048, 4096];
+        if (matSize.value !== "default") {
+            matrixSizes = [parseInt(matSize.value)];
+        }
         let performanceData = [];
         let FinalGFLOPS = 0;
         

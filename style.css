@@ -696,7 +696,7 @@ body.light-mode .dd-label {
     letter-spacing: 1px;
 }
 
-#select-processor, #compute-type, #iter-input {
+#select-processor, #compute-type, #iter-input, #matrix-size {
     background-color: var(--panel-bg);
     color: var(--accent);
     border: 1px solid var(--border-color);
@@ -722,12 +722,21 @@ body.light-mode .dd-label {
 
 #select-processor:hover, #select-processor:focus,
 #compute-type:hover, #compute-type:focus, 
-#iter-input:hover #iter-input:focus {
+#iter-input:hover #iter-input:focus, 
+#matrix-size:hover, #matrix-size:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.598);
+    box-shadow: 0 0 0 2px rgb(71, 46, 213);
 }
 
-#select-processor, #compute-type {
+body.light-mode #select-processor:hover, body.light-mode #select-processor:focus,
+body.light-mode #compute-type:hover, body.light-mode #compute-type:focus,
+body.light-mode #iter-input:hover, body.light-mode #iter-input:focus,
+body.light-mode #matrix-size:hover, body.light-mode #matrix-size:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1.5px rgba(2, 179, 146, 0.515);
+}
+
+#select-processor, #compute-type, #matrix-size {
     background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ffcc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
@@ -766,7 +775,7 @@ body.light-mode .dd-label {
     color: rgba(32, 127, 243, 0.7)
 }
 
-#select-processor option, #compute-type option {
+#select-processor option, #compute-type option, #matrix-size option {
     background-color: var(--panel-bg);
     color: var(--text-main);
 }

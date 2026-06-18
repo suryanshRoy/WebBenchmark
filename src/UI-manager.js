@@ -17,6 +17,7 @@ export const computeType = document.getElementById('compute-type');
 export const iterInput = document.getElementById("iter-input");
 export const matTestCB = document.getElementById("mat-test-checkbox");
 export const aluTestCB = document.getElementById("alu-test-checkbox");
+export const matSize = document.getElementById("matrix-size");
 
 const panelHeader = document.getElementById('set-panel-header');
 const panelContent = document.getElementById('set-panel-content');
@@ -194,6 +195,10 @@ document.addEventListener('DOMContentLoaded', () => {
         matTestCB.checked = savedMatTest === 'true';
     }
 
+    matSize.addEventListener('change', (e) => {
+        localStorage.setItem('benchmark_mat_size', e.target.value);
+    });
+
     const savedAluTest = localStorage.getItem("benchmark_alu_test");
     if (savedAluTest !== null) {
         aluTestCB.checked = savedAluTest === 'true';
@@ -263,6 +268,7 @@ export function toggleUILock(isLocked){
     computeType.disabled = isLocked;
     processorSelect.disabled = isLocked;
     simdCheckbox.disabled = isLocked;
+    matSize.disabled = isLocked;
 
     matTestCB.disabled = isLocked;
     advSettingsToggle.disabled = isLocked;
