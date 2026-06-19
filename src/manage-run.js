@@ -115,7 +115,13 @@ export async function runGPU() {
         if (adapter.features.has('shader-f16')){
             requiredFeatures.push('shader-f16');
         }
-        const device = await adapter.requestDevice({requiredFeatures});
+
+        const bufferLimit = {
+            maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
+            maxBufferSize: adapter.limits.maxBufferSize,
+        };
+
+        const device = await adapter.requestDevice({requiredFeatures, requiredLimits: bufferLimit});
         AppState.activeGPUDevice = device;
         
         let matrixSizes = [256, 512, 1024, 2048, 4096];

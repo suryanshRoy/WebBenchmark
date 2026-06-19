@@ -80,7 +80,7 @@ startBtn.addEventListener('click', () => {
         runCPU()
     }
     else {
-        console.log("WebGPU Pipeline starting...");
+        console.log("WebGPU initializing...");
         gflopsDisplay.innerText = "Waking up GPU...";
         runGPU();
     }
