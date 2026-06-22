@@ -1,7 +1,7 @@
 import matrixMultiplyWGSL from './compute.wgsl?raw';
 import aluWGSL from './ALU_compute.wgsl?raw';
 
-export async function runWebGPU(device, matrixSize, iterations, precision, isRunning) {
+export async function runWebGPU(device, matrixSize, iterations, precision, isRunning, onUpdate) {
     const totalElements = matrixSize * matrixSize;
     const isF16 = precision.includes('f16')
     const byteSize = totalElements * (isF16?  2:4); 
@@ -95,6 +95,49 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
         }
     }
 
+    const operationsPerIteration = 2 * Math.pow(matrixSize, 3);
+
+    if (onUpdate) {
+        return new Promise((resolve) => {
+            const currentStartTime = performance.now();
+            
+            async function runFrame() {
+                if ((isRunning && !isRunning()) || (performance.now() - currentStartTime > 180000)) {
+                    bufferA.destroy();
+                    bufferB.destroy();
+                    bufferC.destroy();
+                    uniformBuffer.destroy();
+                    resolve({gflops: 0, timeTakenSec: 0});
+                    return;
+                }
+
+                const startTime = performance.now();
+                const mainEncoder = device.createCommandEncoder();
+                const mainPass = mainEncoder.beginComputePass();
+                mainPass.setPipeline(computePipeline);
+                mainPass.setBindGroup(0, bindGroup); 
+
+                for (let i = 0; i < remainingIters; i++) {
+                    mainPass.dispatchWorkgroups(workgroupCount, workgroupCount);
+                }
+
+                mainPass.end();
+                device.queue.submit([mainEncoder.finish()]);
+                await device.queue.onSubmittedWorkDone();
+
+                const endTime = performance.now();
+                const timeTakenSec = (endTime - startTime) / 1000;
+                const totalFlops = operationsPerIteration * remainingIters;
+                const gflops = (totalFlops / timeTakenSec) / 1e9;
+
+                onUpdate(gflops);
+                setTimeout(runFrame, 1000);
+            }
+            
+            runFrame();
+        });
+    }
+
     if (remainingIters > 0) {
         const mainEncoder = device.createCommandEncoder();
         
@@ -103,12 +146,10 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
         mainPass.setPipeline(computePipeline);
         mainPass.setBindGroup(0, bindGroup);
 
-        // DISPATCH ALL ITERATIONS
         for (let i = 0; i < remainingIters; i++) {
             mainPass.dispatchWorkgroups(workgroupCount, workgroupCount);
         }
 
-        // CLOSE PASS ONCE
         mainPass.end(); 
         device.queue.submit([mainEncoder.finish()]); 
 
@@ -128,7 +169,6 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
     if (completedIters === 0){
         return {gflops: 0, timeTakenSec: timeTakenSec}; 
     }
-    const operationsPerIteration = 2 * Math.pow(matrixSize, 3);
     const totalFlops = operationsPerIteration * completedIters;
     const gflops = (totalFlops / timeTakenSec) / 1e9;
 

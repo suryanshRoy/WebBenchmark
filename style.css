@@ -202,16 +202,22 @@ body.light-mode {
     background-clip: text; 
     color: transparent; 
     
-    animation: gradient-shift 12s ease infinite; 
+    animation: gradient-shift 30s ease infinite; 
     padding-bottom: 5px;
-    /* TODO change it to ensure that the background shadow is not static red but changing with the color of WebBenchmark! */
-    filter: drop-shadow(0 0 10px rgba(255, 60, 80, 0.4));
+    animation: gradient-shift 30s ease infinite, shadow-shift 30s ease infinite;
 }
 
 @keyframes gradient-shift {
     0% {background-position: 0% 50%; }
     50% {background-position: 100% 50%; }
     100% {background-position: 0% 50%; }
+}
+
+@keyframes shadow-shift {
+    0% { filter: drop-shadow(0 0 10px rgba(255, 60, 80, 0.4)); }
+    33% { filter: drop-shadow(0 0 10px rgba(156, 136, 255, 0.4)); }
+    66% { filter: drop-shadow(0 0 10px rgba(0, 255, 204, 0.4)); }
+    100% { filter: drop-shadow(0 0 10px rgba(255, 90, 70, 0.4)); }
 }
 
 .panel-header{

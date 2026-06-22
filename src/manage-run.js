@@ -135,7 +135,7 @@ export async function runGPU() {
 
     try {
         const adapter = await navigator.gpu.requestAdapter();
-        if (!adapter) throw new Error("No adapter found");
+        if (!adapter) throw new Error("Sorry, this device does not support WebGPU, WebGL2 or WebGL. Please try a different device or browser.");
         const requiredFeatures = [];
         if (adapter.features.has('shader-f16')){
             requiredFeatures.push('shader-f16');
@@ -184,25 +184,16 @@ export async function runGPU() {
                 }
             }
             if (isStressTest && AppState.isEngineRunning) {
-            const startTime = performance.now();
-
-            while (AppState.isEngineRunning) {
-                if (performance.now() - startTime > 180000) {// 3 minutes to burn the chip :)
-                    console.warn("3 minute stress test completed! Stopping...");
-                    break;
-                }
-                gflopsDisplay.innerText = `Stress Test: ${maxMatSize}x${maxMatSize}`;
-
-                const result = await cpuMatRun(maxMatSize, userIters, userPrecision);
-                if (!AppState.isEngineRunning || result.gflops === 0) {
-                    break;
-                }
-                performanceData.push({matrix: maxMatSize, gflops: result.gflops});
-                AppState.currentGraphData = performanceData;
-                plotPerformanceCurve(performanceData);
-
-                await new Promise(resolve => setTimeout(resolve, 500)); // REVIEW maybe 0.5 sec is good but still need to check if UI is responsive or not
-            }}
+                gflopsDisplay.innerText = `Stressing Test ${maxMatSize}x${maxMatSize}`;
+                
+                await runWebGPU(device, maxMatSize, userIters, userPrecision, () => AppState.isEngineRunning, (gflops) => {
+                    gflopsDisplay.innerText = `Stress Test ${maxMatSize}x${maxMatSize}: ${gflops.toFixed(2)} GFLOPS`;
+                    
+                    performanceData.push({matrix: maxMatSize, gflops: gflops});
+                    AppState.currentGraphData = performanceData;
+                    plotPerformanceCurve(performanceData);
+                });
+            }
             if (performanceData.length > 0){
                 AppState.graphType.push({
                 name: "Matrix",
@@ -222,8 +213,8 @@ export async function runGPU() {
             await new Promise(resolve => setTimeout(resolve, 3000));
             if (!AppState.isEngineRunning) return;
 
-            statusText.innerText = 'Computing ALU Stress Test...'
-            gflopsDisplay.innerText = 'Computing ALU Stress Test...';
+            statusText.innerText = 'Computing ALU Benchmark Test...'
+            gflopsDisplay.innerText = 'Computing ALU Benchmark Test...';
 
             const aluAdapter = await navigator.gpu.requestAdapter();
             if (!aluAdapter || !AppState.isEngineRunning) {

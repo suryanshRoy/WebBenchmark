@@ -81,7 +81,9 @@ export function plotPerformanceCurve(performanceData) {
         ctx.fillStyle = gridTextColor;
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`M:${point.matrix}`, coord.x, bottomY + 15);
+
+        const labelText = String(point.matrix).startsWith("L") ? point.matrix : `M:${point.matrix}`;
+        ctx.fillText(labelText, coord.x, bottomY + 15);
         
         ctx.fillStyle = nodeTextColor;
         ctx.fillText(`${point.gflops.toFixed(0)} GF`, coord.x, coord.y - 10);
