@@ -1,7 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {detectUserGPU, processorListner} from "./processorManager.js";
 import {runCPU, runGPU, benchmarkWorker} from "./manage-run.js";
-import {toggleUILock, matTestCB, aluTestCB} from "./UI-manager.js";
+import {toggleUILock, matTestCB, aluTestCB, stressTestCB} from "./UI-manager.js";
 
 //  btn and warning elements
 export const startBtn = document.getElementById('start-btn');
@@ -44,7 +44,7 @@ export const gflopsDisplay = document.getElementById('gflops-current');
 
 // Start Button Control!!!
 startBtn.addEventListener('click', () => {
-    if (!matTestCB.checked && !aluTestCB.checked) {
+    if (!matTestCB.checked && !aluTestCB.checked && !stressTestCB.checked) {
         warningMsg.innerText = "Please select at least one test to run!";
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);

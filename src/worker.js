@@ -26,7 +26,6 @@ createEngine({
     console.error("FATAL ENGINE ERROR:", error);
 });
 
-// Infinite loop for CPU thermal throttling 
 function runBenchmarkLoop(iterations, precisionType = 0) {
     if (!isEngineRunning || !engineInstance) return;
 

@@ -17,6 +17,7 @@ export const computeType = document.getElementById('compute-type');
 export const iterInput = document.getElementById("iter-input");
 export const matTestCB = document.getElementById("mat-test-checkbox");
 export const aluTestCB = document.getElementById("alu-test-checkbox");
+export const stressTestCB = document.getElementById("stress-test-checkbox");
 export const matSize = document.getElementById("matrix-size");
 
 const panelHeader = document.getElementById('set-panel-header');
@@ -44,8 +45,6 @@ const nextBtn = document.getElementById('next-btn');
 function toggleSidebar() {
     sidebar.classList.toggle('closed');
     sidebarOverlay.classList.toggle('active');
-    
-    // Add this line to trigger the CSS morph animation!
     menuBtn.classList.toggle('open'); 
 }
 
@@ -91,6 +90,19 @@ function changeGraphNum(moveGraph){
 if (prevBtn && nextBtn) {
     prevBtn.addEventListener('click', () => changeGraphNum(-1));
     nextBtn.addEventListener('click', () => changeGraphNum(1));
+}
+
+function stressTestUI(onStressTest) {
+    if (onStressTest) {
+        matTestCB.checked = false;
+        aluTestCB.checked = false;
+        matTestCB.disabled = true;
+        aluTestCB.disabled = true;
+    }
+    else {
+        matTestCB.disabled = false;
+        aluTestCB.disabled = processorSelect.value === "CPU"; // disable ALU test if CPU is selected
+    }
 }
 
 export function updatePreciOption() {
@@ -203,6 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedAluTest !== null) {
         aluTestCB.checked = savedAluTest === 'true';
     }
+    const savedStressTest = localStorage.getItem("benchmark_stress_test");
+    if (savedStressTest !== null) {
+        stressTestCB.checked = savedStressTest === 'true';
+        stressTestUI(savedStressTest === 'true');
+    }
     updatePreciOption();
 
     if (savedPrecision) {
@@ -222,6 +239,11 @@ simdCheckbox.addEventListener('change', (e)=> {
 
 matTestCB.addEventListener('change', (e) => {
     localStorage.setItem('benchmark_mat_test', e.target.checked);
+});
+
+stressTestCB.addEventListener('change', (e) => {
+    localStorage.setItem('benchmark_stress_test', e.target.checked);
+    stressTestUI(e.target.checked);
 });
 
 aluTestCB.addEventListener('change', (e) => {
@@ -272,6 +294,7 @@ export function toggleUILock(isLocked){
 
     matTestCB.disabled = isLocked;
     advSettingsToggle.disabled = isLocked;
+    stressTestCB.disabled = isLocked;
 
     if (isLocked) {
         aluTestCB.disabled = true; // disable alu when running

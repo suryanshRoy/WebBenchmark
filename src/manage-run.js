@@ -1,7 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {GPU_ALU, runWebGPU} from "./gpu-engine.js";
 import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.js";
-import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize} from "./UI-manager.js";
+import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize, stressTestCB} from "./UI-manager.js";
 
 export const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
 
@@ -59,8 +59,11 @@ export async function runCPU() {
         }
         let performanceData = [];
         let FinalGFLOPS = 0;
+        const isStressTest = stressTestCB.checked;
+        const runMat = matTestCB.checked || isStressTest;
 
-        if (matTestCB.checked) {
+        if (runMat) {
+        let maxMatSize = 256;
         for(let size of matrixSize){
             if (!AppState.isEngineRunning) break;
             gflopsDisplay.innerText = `Testing ${size}x${size}...`;
@@ -72,6 +75,7 @@ export async function runCPU() {
             if (result.gflops > FinalGFLOPS){
                 FinalGFLOPS =  result.gflops;
             }
+            maxMatSize = size; // since this is inside for loop, this will be the last successful size
 
             performanceData.push({matrix: size, gflops: result.gflops});
             AppState.currentGraphData = performanceData;
@@ -82,7 +86,28 @@ export async function runCPU() {
                 console.warn(`Matrix ${size} took ${result.timeTakenSec.toFixed(2)}s. Next may take it's 8x time!`);
                 break;
             }
-        }}
+        }
+        if (isStressTest && AppState.isEngineRunning) {
+            const startTime = performance.now();
+
+            while (AppState.isEngineRunning) {
+                if (performance.now() - startTime > 180000) {// 3 minutes to burn the chip :)
+                    console.warn("3 minute stress test completed! Stopping...");
+                    break;
+                }
+                gflopsDisplay.innerText = `Stress Test: ${maxMatSize}x${maxMatSize}`;
+
+                const result = await cpuMatRun(maxMatSize, userIters, userPrecision);
+                if (!AppState.isEngineRunning || result.gflops === 0) {
+                    break;
+                }
+                performanceData.push({matrix: maxMatSize, gflops: result.gflops});
+                AppState.currentGraphData = performanceData;
+                plotPerformanceCurve(performanceData);
+
+                await new Promise(resolve => setTimeout(resolve, 500)); // REVIEW maybe 0.5 sec is good but still need to check if UI is responsive or not
+            }
+       }}
 
         if (performanceData.length > 0) {
             AppState.graphType.push({
@@ -130,8 +155,12 @@ export async function runGPU() {
         }
         let performanceData = [];
         let FinalGFLOPS = 0;
+
+        const isStressTest = stressTestCB.checked;
+        const runMat = matTestCB.checked || isStressTest;
         
-        if (matTestCB.checked){
+        if (runMat) {
+            let maxMatSize = 256;
             for (let size of matrixSizes) {
                 if (!AppState.isEngineRunning) break;
                 
@@ -143,6 +172,7 @@ export async function runGPU() {
                 
                 const currentGflops = resultGflops.gflops;
                 if (currentGflops > FinalGFLOPS) FinalGFLOPS = currentGflops;
+                maxMatSize = size; // since this is inside for loop, this will be the last successful size
                 
                 performanceData.push({matrix: size, gflops: currentGflops});
                 AppState.currentGraphData = performanceData;
@@ -153,6 +183,26 @@ export async function runGPU() {
                     break;
                 }
             }
+            if (isStressTest && AppState.isEngineRunning) {
+            const startTime = performance.now();
+
+            while (AppState.isEngineRunning) {
+                if (performance.now() - startTime > 180000) {// 3 minutes to burn the chip :)
+                    console.warn("3 minute stress test completed! Stopping...");
+                    break;
+                }
+                gflopsDisplay.innerText = `Stress Test: ${maxMatSize}x${maxMatSize}`;
+
+                const result = await cpuMatRun(maxMatSize, userIters, userPrecision);
+                if (!AppState.isEngineRunning || result.gflops === 0) {
+                    break;
+                }
+                performanceData.push({matrix: maxMatSize, gflops: result.gflops});
+                AppState.currentGraphData = performanceData;
+                plotPerformanceCurve(performanceData);
+
+                await new Promise(resolve => setTimeout(resolve, 500)); // REVIEW maybe 0.5 sec is good but still need to check if UI is responsive or not
+            }}
             if (performanceData.length > 0){
                 AppState.graphType.push({
                 name: "Matrix",
@@ -161,7 +211,7 @@ export async function runGPU() {
             }
         }
 
-        if (AppState.isEngineRunning && aluTestCB.checked) {
+        if (AppState.isEngineRunning && aluTestCB.checked && !isStressTest) {
             let displaySpeed = "";
             displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
             gflopsDisplay.innerText = displaySpeed;
