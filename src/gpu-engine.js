@@ -4,7 +4,7 @@ import aluWGSL from './ALU_compute.wgsl?raw';
 export async function runWebGPU(device, matrixSize, iterations, precision, isRunning, onUpdate) {
     const totalElements = matrixSize * matrixSize;
     const isF16 = precision.includes('f16')
-    const byteSize = totalElements * (isF16?  2:4); 
+    const byteSize = totalElements * (isF16 ? 2 : 4); 
 
     const bufferA = device.createBuffer({size: byteSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
     const bufferB = device.createBuffer({size: byteSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
@@ -113,15 +113,15 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
 
                 const startTime = performance.now();
                 const mainEncoder = device.createCommandEncoder();
-                const mainPass = mainEncoder.beginComputePass();
-                mainPass.setPipeline(computePipeline);
-                mainPass.setBindGroup(0, bindGroup); 
-
                 for (let i = 0; i < remainingIters; i++) {
+                    const mainPass = mainEncoder.beginComputePass();
+                    mainPass.setPipeline(computePipeline);
+                    mainPass.setBindGroup(0, bindGroup); 
                     mainPass.dispatchWorkgroups(workgroupCount, workgroupCount);
-                }
+                    mainPass.end();
 
-                mainPass.end();
+                    mainEncoder.copyBufferToBuffer(bufferC, 0, bufferA, 0, byteSize);
+                }
                 device.queue.submit([mainEncoder.finish()]);
                 await device.queue.onSubmittedWorkDone();
 
@@ -131,7 +131,8 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
                 const gflops = (totalFlops / timeTakenSec) / 1e9;
 
                 onUpdate(gflops);
-                setTimeout(runFrame, 1000);
+                
+                setTimeout(runFrame, 200);
             }
             
             runFrame();
@@ -141,19 +142,19 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
     if (remainingIters > 0) {
         const mainEncoder = device.createCommandEncoder();
         
-        // open the pass once only
-        const mainPass = mainEncoder.beginComputePass();
-        mainPass.setPipeline(computePipeline);
-        mainPass.setBindGroup(0, bindGroup);
-
-        for (let i = 0; i < remainingIters; i++) {
+        // seperate pass for the remaining iterations
+        for (let i=0; i<remainingIters; i++){
+            const mainPass = mainEncoder.beginComputePass();
+            mainPass.setPipeline(computePipeline);
+            mainPass.setBindGroup(0, bindGroup);
             mainPass.dispatchWorkgroups(workgroupCount, workgroupCount);
+            mainPass.end();
+
+            mainEncoder.copyBufferToBuffer(bufferC, 0, bufferA, 0, byteSize);
         }
-
-        mainPass.end(); 
-        device.queue.submit([mainEncoder.finish()]); 
-
+        device.queue.submit([mainEncoder.finish()]);
         await device.queue.onSubmittedWorkDone();
+
         completedIters += remainingIters;
     }
 
@@ -174,6 +175,7 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
 
     return {gflops: gflops, timeTakenSec: timeTakenSec};
 }
+
 
 export async function GPU_ALU(device, isRunning, onUpdate){
     const shaderModule = device.createShaderModule({code: aluWGSL});
