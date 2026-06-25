@@ -11,15 +11,25 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
     const bufferC = device.createBuffer({size: byteSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC});
     
     const uniformBuffer = device.createBuffer({size: 4, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST});
+    const readBuffer = device.createBuffer({size: 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST});
 
     let dataA, dataB;
     if (isF16){
-        dataA = new Uint16Array(totalElements).fill(0x3C00);
-        dataB = new Uint16Array(totalElements).fill(0x4000);
+        dataA = new Uint16Array(totalElements);
+        dataB = new Uint16Array(totalElements);
+        const f16Val = [0x3800, 0x3C00, 0x4000, 0x4200, 0x4400];
+        for (let i = 0; i<totalElements; i++){
+            dataA[i]= f16Val[Math.floor(Math.random() * f16Val.length)]; // randomize mat to ensure that gpu doesn't try to be oversmart
+            dataB[i]= f16Val[Math.floor(Math.random() * f16Val.length)];
+        }
     }
     else {
-        dataA = new Float32Array(totalElements).fill(1.0);
-        dataB = new Float32Array(totalElements).fill(2.0);
+        dataA = new Float32Array(totalElements);
+        dataB = new Float32Array(totalElements);
+        for (let i=0; i<totalElements; i++){
+            dataA[i] = Math.random() * 0.5 + 0.1;
+            dataB[i] = Math.random() * 0.5 + 0.1;
+        }
     }
 
     const uniformData = new Uint32Array([matrixSize]);
@@ -62,8 +72,13 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
 
     passEncoder.dispatchWorkgroups(workgroupCount, workgroupCount);
     passEncoder.end();
+
+    commandEncoder.copyBufferToBuffer(bufferC, 0, readBuffer, 0, 4);
     device.queue.submit([commandEncoder.finish()]);
-    await device.queue.onSubmittedWorkDone(); 
+
+    await readBuffer.mapAsync(GPUMapMode.READ);
+    readBuffer.unmap();
+
     const calibTimeMs = performance.now() - startTime;
 
     if (isRunning && !isRunning()) {  // see decleration in the main js
@@ -74,27 +89,10 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
         return {gflops: 0, timeTakenSec: calibTimeMs / 1000};
     }
 
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isWindows = userAgent.includes("windows");
-    const hasWatchdog = isWindows;
-
     let completedIters = 1;
     let remainingIters = iterations - 1;
 
-    // scaling based on the calibration pass
-    if (calibTimeMs < 400) remainingIters = iterations - 1;
-    else if (calibTimeMs < 500) remainingIters = Math.min(iterations - 1, 39);
-    else if (calibTimeMs < 700) remainingIters = Math.min(iterations - 1, 19);
-    else remainingIters = Math.min(iterations - 1, 9);
-
-    if (hasWatchdog) {
-        const projectTotalTime = calibTimeMs * iterations;
-        if (projectTotalTime > 1500) {
-            const maxsafeIters = Math.floor(1500 / calibTimeMs);
-            remainingIters = Math.max(0, maxsafeIters - 1);
-        }
-    }
-
+    let ItersChunk = Math.max(1, Math.floor(1500 / calibTimeMs));
     const operationsPerIteration = 2 * Math.pow(matrixSize, 3);
 
     if (onUpdate) {
@@ -102,18 +100,19 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
             const currentStartTime = performance.now();
             
             async function runFrame() {
-                if ((isRunning && !isRunning()) || (performance.now() - currentStartTime > 180000)) {
+                if ((isRunning && !isRunning()) || (performance.now() - currentStartTime > 300000)) { // maybe the 5 min is fine for actual throttle
                     bufferA.destroy();
                     bufferB.destroy();
                     bufferC.destroy();
                     uniformBuffer.destroy();
+                    readBuffer.destroy();
                     resolve({gflops: 0, timeTakenSec: 0});
                     return;
                 }
 
                 const startTime = performance.now();
                 const mainEncoder = device.createCommandEncoder();
-                for (let i = 0; i < remainingIters; i++) {
+                for (let i = 0; i < ItersChunk; i++) {
                     const mainPass = mainEncoder.beginComputePass();
                     mainPass.setPipeline(computePipeline);
                     mainPass.setBindGroup(0, bindGroup); 
@@ -122,17 +121,29 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
 
                     mainEncoder.copyBufferToBuffer(bufferC, 0, bufferA, 0, byteSize);
                 }
+                mainEncoder.copyBufferToBuffer(bufferC, 0, readBuffer, 0, 4);
                 device.queue.submit([mainEncoder.finish()]);
-                await device.queue.onSubmittedWorkDone();
+
+                try {
+                    await readBuffer.mapAsync(GPUMapMode.READ);
+                    readBuffer.unmap();
+                    } catch (error) {
+                        if (error.name === "AbortError") {
+                            resolve({gflops: 0, timeTakenSec: 0});
+                            return;
+                        } else {
+                            throw error;
+                        }
+                }
 
                 const endTime = performance.now();
                 const timeTakenSec = (endTime - startTime) / 1000;
-                const totalFlops = operationsPerIteration * remainingIters;
+                const totalFlops = operationsPerIteration * ItersChunk;
                 const gflops = (totalFlops / timeTakenSec) / 1e9;
 
                 onUpdate(gflops);
                 
-                setTimeout(runFrame, 200);
+                setTimeout(runFrame, 10);
             }
             
             runFrame();
@@ -140,10 +151,14 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
     }
 
     if (remainingIters > 0) {
-        const mainEncoder = device.createCommandEncoder();
-        
-        // seperate pass for the remaining iterations
-        for (let i=0; i<remainingIters; i++){
+        let itersLeft= remainingIters;
+
+        while (itersLeft > 0) {
+            if (isRunning && !isRunning()) break;
+
+            let chunk = Math.min(itersLeft, ItersChunk);
+            const mainEncoder = device.createCommandEncoder();
+        for (let i=0; i<chunk; i++){
             const mainPass = mainEncoder.beginComputePass();
             mainPass.setPipeline(computePipeline);
             mainPass.setBindGroup(0, bindGroup);
@@ -152,11 +167,25 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
 
             mainEncoder.copyBufferToBuffer(bufferC, 0, bufferA, 0, byteSize);
         }
+        mainEncoder.copyBufferToBuffer(bufferC, 0, readBuffer, 0, 4);
         device.queue.submit([mainEncoder.finish()]);
-        await device.queue.onSubmittedWorkDone();
 
-        completedIters += remainingIters;
+        try {
+            await readBuffer.mapAsync(GPUMapMode.READ);
+            readBuffer.unmap();
+        }
+         catch (error) {
+            if (error.name === "AbortError") {
+                break;
+            } else {
+                throw error;
+            }
+        }
+
+        itersLeft = itersLeft - chunk;
+        completedIters += chunk;
     }
+}
 
     const endTime = performance.now();
 
@@ -165,6 +194,7 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
     bufferB.destroy();
     bufferC.destroy();
     uniformBuffer.destroy();
+    readBuffer.destroy();
 
     const timeTakenSec = (endTime - startTime) / 1000;
     if (completedIters === 0){
