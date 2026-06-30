@@ -183,17 +183,37 @@ export async function runGPU() {
                     break;
                 }
             }
+
             if (isStressTest && AppState.isEngineRunning) {
-                gflopsDisplay.innerText = `Stressing Test ${maxMatSize}x${maxMatSize}`;
+                gflopsDisplay.innerText = `Stress Test ${maxMatSize}x${maxMatSize}`;
+                let GflopsStats = 0;
+                let stressData = [];
                 
                 await runWebGPU(device, maxMatSize, userIters, userPrecision, () => AppState.isEngineRunning, (gflops) => {
+
+                    if (GflopsStats === 0) GflopsStats = gflops;
+                    let changePercent = GflopsStats > 0 ? ((gflops - GflopsStats)) / GflopsStats * 100 : 0; 
+
                     gflopsDisplay.innerText = `Stress Test ${maxMatSize}x${maxMatSize}: ${gflops.toFixed(2)} GFLOPS`;
+
+                    let isGFLOPS = gflops >= 1000 ? `${(gflops/1000).toFixed(2)} TFLOPS` : `${gflops.toFixed(2)} GFLOPS`;
+
+                    if (changePercent >= 1.0) {
+                        gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="inc-percentage">▲ ${changePercent.toFixed(1)}%</span>`;
+                    }
+                    else if (changePercent <= -1.0) {
+                        gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="drop-percentage">▼ ${Math.abs(changePercent).toFixed(1)}%</span>`;
+                    }
+                    else {
+                        gflopsDisplay.innerHTML = isGFLOPS;
+                    }
                     
-                    performanceData.push({matrix: maxMatSize, gflops: gflops});
-                    AppState.currentGraphData = performanceData;
-                    plotPerformanceCurve(performanceData);
+                    stressData.push({matrix: null, gflops: gflops});
+                    AppState.currentGraphData = stressData;
+                    plotPerformanceCurve(stressData);
                 });
             }
+            
             if (performanceData.length > 0){
                 AppState.graphType.push({
                 name: "Matrix",

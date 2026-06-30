@@ -1,7 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {detectUserGPU, processorListner} from "./processorManager.js";
 import {runCPU, runGPU, benchmarkWorker} from "./manage-run.js";
-import {toggleUILock, matTestCB, aluTestCB, stressTestCB} from "./UI-manager.js";
+import {toggleUILock, matTestCB, aluTestCB, stressTestCB, updateTimerDisplay} from "./UI-manager.js";
 
 //  btn and warning elements
 export const startBtn = document.getElementById('start-btn');
@@ -23,7 +23,9 @@ export const AppState = { // ai fixed issue
     graphType: [],
     currentGraphNum: 0,
     isEngineRunning: false,
-    isEngineReady: false
+    isEngineReady: false,
+    stressRunTime: 0,
+    RunTimeState: null
 };
 
 export function setCurrentProcessor(value) { // again ai fixed issue for ES6 or whatever it is
@@ -74,6 +76,20 @@ startBtn.addEventListener('click', () => {
 
     AppState.isEngineRunning = true; 
     toggleUILock(true);
+
+    if (stressTestCB.checked) {
+        AppState.stressRunTime = Date.now() + 5 * 60 * 1000; 
+        document.getElementById('stress-time-box').style.display = 'block';
+        updateTimerDisplay();
+        if (AppState.RunTimeState) {
+            clearInterval(AppState.RunTimeState);
+        }
+        AppState.RunTimeState = setInterval(updateTimerDisplay, 1000);
+    }
+    else {
+        document.getElementById('stress-time-box').style.display = 'none';
+    }
+
     if (AppState.currentProcessor === 'CPU') {
         console.log("WASM CPU starting up...");
         gflopsDisplay.innerText = "Waking up CPU...";
@@ -93,11 +109,13 @@ stopBtn.addEventListener('click', () => {
         stopBtn.classList.add('vibrate-active');
         setTimeout(() => stopBtn.classList.remove('vibrate-active'), 300);
         warningMsg.classList.add('show-warning');
-        setTimeout(() => warningMsg.classList.remove('show-warning'), 2500);
+        setTimeout(() => warningMsg.classList.remove('show-warning'), 3500);
         return;
     }
     AppState.isEngineRunning = false;
     toggleUILock(false);
+    clearInterval(AppState.RunTimeState);
+    document.getElementById('stress-time-box').style.display = 'none';
 
     if (AppState.activeGPUDevice) {
         AppState.activeGPUDevice.destroy();

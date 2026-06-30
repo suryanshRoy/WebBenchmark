@@ -532,6 +532,33 @@ input:checked + .slider:before {
     stroke: var(--text-main);
 } 
 
+.timer-btn {
+    width: 24px;
+    height: 20px;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.2s ease;
+}
+
+.drop-percentage {
+    font-size: 0.6em;
+    color: rgb(227, 8, 8);
+    display: block;
+    margin-top: 4px;
+    font-weight: bold;
+}
+
+.inc-percentage {
+    font-size: 0.6em;
+    color: rgba(13, 205, 86, 0.896);
+    display: block;
+    margin-top: 4px;
+    font-weight: bold;
+}
+
 .arrow-btn {
     position: absolute;
     top: 50%;                   

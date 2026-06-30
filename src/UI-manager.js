@@ -1,4 +1,4 @@
-import { AppState, processorSelect, startBtn, warningMsg } from "./main";
+import { AppState, processorSelect, stopBtn } from "./main";
 import { plotPerformanceCurve } from "./performanceCurve";
 
 // Sidebar Elements
@@ -104,6 +104,33 @@ function stressTestUI(onStressTest) {
         aluTestCB.disabled = processorSelect.value === "CPU"; // disable ALU test if CPU is selected
     }
 }
+
+export function updateTimerDisplay() {
+    const timeLeft = AppState.stressRunTime - Date.now();
+    if (timeLeft <= 0) {
+        document.getElementById('time-remaining').innerText = '';
+        clearInterval(AppState.RunTimeState);
+        if (AppState.isEngineRunning) {
+            stopBtn.click();
+        } 
+    }
+    else {
+        const minutes = Math.floor(timeLeft / 60000);
+        const seconds = Math.floor((timeLeft % 60000) / 1000);
+        document.getElementById('time-remaining').innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}s`;
+    }
+}
+
+document.getElementById('add-time-btn')?.addEventListener('click', () => {
+    AppState.stressRunTime += 60000;
+    updateTimerDisplay();;
+});
+document.getElementById('reduce-time-btn')?.addEventListener('click', () => {
+    if (AppState.stressRunTime - Date.now() > 60000) {
+        AppState.stressRunTime -= 60000;
+        updateTimerDisplay();
+    }
+});
 
 export function updatePreciOption() {
     computeType.innerHTML = '';

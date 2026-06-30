@@ -100,7 +100,7 @@ export async function runWebGPU(device, matrixSize, iterations, precision, isRun
             const currentStartTime = performance.now();
             
             async function runFrame() {
-                if ((isRunning && !isRunning()) || (performance.now() - currentStartTime > 300000)) { // maybe the 5 min is fine for actual throttle
+                if (isRunning && !isRunning()){ // maybe the 5 min is fine for actual throttle
                     bufferA.destroy();
                     bufferB.destroy();
                     bufferC.destroy();
