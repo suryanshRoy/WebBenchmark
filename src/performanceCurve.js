@@ -93,7 +93,7 @@ export function plotPerformanceCurve(performanceData) {
                 ctx.fillStyle = gridTextColor;
                 ctx.font = '10px monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText(`${(index / 10).toFixed(0)}s`, coord.x, bottomY + 15);
+                ctx.fillText("|", coord.x, bottomY + 15);
             }
         }
     });

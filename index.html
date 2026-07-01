@@ -145,19 +145,15 @@
                             <h3>Time remaining</h3>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
                                 <span id="time-remaining" style="font-size: 1.2rem; font-weight:bold;">05:00s</span>
-                                <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: center; margin-top: 5px;">
-                                    <button id="add-time-btn" class="timer-btn">
-                                        <!-- my fav chernov :) -->
-                                         <svg id="time-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="18 15 12 9 6 15"></polyline>
-                                        </svg>
-                                    </button>
-                                    <button id="reduce-time-btn" class="timer-btn">
-                                        <svg id="time-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                        </svg>
-                                    </button>
-                                </div>
+                                
+                                <div class="iter-arrow" style="color: var(--accent);">
+                                    <svg id="add-time-btn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="18 15 12 9 6 15"></polyline>
+                                    </svg>
+                                    <svg id="reduce-time-btn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>    
                             </div>
                         </div>
 

@@ -218,9 +218,69 @@ export async function GPU_ALU(device, isRunning, onUpdate){
         },
     });
 
-    // FIXME: Currently static only for normal system! Need to be dynamically adjust itself!
-    const threadsCount = 262144; //std thread
-    const bufferSize= threadsCount*4;
+    const calibThreads = 65536;
+    const calibBufSize = calibThreads * 4;
+    const calibInput = device.createBuffer({size: calibBufSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST});
+    const calibOutput = device.createBuffer({size: calibBufSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC});
+
+    const calibData = new Float32Array(calibThreads);
+    for (let i = 0; i < calibThreads; i++) {
+        calibData[i] = Math.random() * 0.5 + 0.1;
+    }
+    device.queue.writeBuffer(calibInput, 0, calibData);
+
+    const calibBindGroup = device.createBindGroup({
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            {
+                binding: 0, resource: {buffer: calibInput}
+            },
+            {
+                binding: 1, resource: {buffer: calibOutput}
+            }
+        ]
+    });
+
+    const calibStTime = performance.now();
+    const calibEncoder = device.createCommandEncoder();
+    const calibPass = calibEncoder.beginComputePass();
+    calibPass.setPipeline(computePipeline);
+    calibPass.setBindGroup(0, calibBindGroup);
+    
+    for (let i = 0; i < 5; i++) {
+        calibPass.dispatchWorkgroups(Math.ceil(calibThreads / 256));
+    }
+    calibPass.end();
+    device.queue.submit([calibEncoder.finish()]);
+    
+    await device.queue.onSubmittedWorkDone();
+    const calibTime = performance.now() - calibStTime;
+
+    calibInput.destroy();
+    calibOutput.destroy();
+
+    let threadsCount;
+    // NOTE That the buf size is defined at line 284 maybe by line const bufferSize = threadsCount * 4; so better not to confuse
+    if (calibTime <= 5){
+        threadsCount = 65536 * 32; // 8mb buf
+    }
+    else if (calibTime <= 9){
+        threadsCount = 65536 * 16; // 4mb buf
+    }
+    else if (calibTime <= 21){
+        threadsCount = 65536 * 8; // 2mb buf
+    }
+    else if (calibTime <= 70){
+        threadsCount = 65536 * 4; // 1mb buf
+    }
+    else if (calibTime <= 120){
+        threadsCount = 65536 * 2; // 512kb buf
+    }
+    else {
+        threadsCount = 65536; // 256kb buf
+    }
+
+    const bufferSize = threadsCount * 4;
     
     const inputBuf = device.createBuffer({size: bufferSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST}); // simultaneously
     const outputBuf = device.createBuffer({size: bufferSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC});
