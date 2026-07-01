@@ -65,13 +65,15 @@ export function plotPerformanceCurve(performanceData) {
     gradient.addColorStop(1, gradientEnd);
     ctx.fillStyle = gradient;
     ctx.fill();
+
     const isALU = performanceData.length > 0 && performanceData[0].matrix === null;
+    const isStressTest = performanceData.length > 0 && performanceData.some(point => point.matrix === 'throttleTest');
 
     coords.forEach((coord, index) => {
         // Display points on Graph
         const point = performanceData[index];
 
-        if (!isALU){
+        if (!isALU && !isStressTest) {
         ctx.fillStyle = 'rgba(255, 49, 49, 0.82)';
         ctx.beginPath();
         ctx.arc(coord.x, coord.y, 4, 0, Math.PI * 2);
@@ -88,12 +90,20 @@ export function plotPerformanceCurve(performanceData) {
         ctx.fillStyle = nodeTextColor;
         ctx.fillText(`${point.gflops.toFixed(0)} GF`, coord.x, coord.y - 10);
         } 
-        else{
+        else if (isALU) {
             if (index % 10 === 0){
                 ctx.fillStyle = gridTextColor;
                 ctx.font = '10px monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText("|", coord.x, bottomY + 15);
+                ctx.fillText(`${(index / 10).toFixed(0)}s`, coord.x, bottomY + 15);
+            }
+        }
+        else if (isStressTest) {
+            if (index % 10 === 0){
+                ctx.fillStyle = gridTextColor;
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(`|`, coord.x, bottomY + 15);
             }
         }
     });

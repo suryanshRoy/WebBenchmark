@@ -546,16 +546,16 @@ input:checked + .slider:before {
 .drop-percentage {
     font-size: 0.6em;
     color: rgb(227, 8, 8);
-    display: block;
-    margin-top: 4px;
+    display: inline-block;
+    margin-left: 8px;
     font-weight: bold;
 }
 
 .inc-percentage {
     font-size: 0.6em;
     color: rgba(13, 205, 86, 0.896);
-    display: block;
-    margin-top: 4px;
+    display: inline-block;
+    margin-left: 8px;
     font-weight: bold;
 }
 

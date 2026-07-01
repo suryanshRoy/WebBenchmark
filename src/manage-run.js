@@ -89,25 +89,37 @@ export async function runCPU() {
         }
         if (isStressTest && AppState.isEngineRunning) {
             const startTime = performance.now();
+            let stressData = [];
+            let GflopsStats = 0;
+            gflopsDisplay.innerText = `Stress Test ${maxMatSize}x${maxMatSize}`;
 
             while (AppState.isEngineRunning) {
-                if (performance.now() - startTime > 180000) {// 3 minutes to burn the chip :)
-                    console.warn("3 minute stress test completed! Stopping...");
-                    break;
-                }
-                gflopsDisplay.innerText = `Stress Test: ${maxMatSize}x${maxMatSize}`;
-
                 const result = await cpuMatRun(maxMatSize, userIters, userPrecision);
                 if (!AppState.isEngineRunning || result.gflops === 0) {
                     break;
                 }
-                performanceData.push({matrix: maxMatSize, gflops: result.gflops});
-                AppState.currentGraphData = performanceData;
-                plotPerformanceCurve(performanceData);
+                if (GflopsStats === 0) GflopsStats = result.gflops;
+                let changePercent = GflopsStats > 0 ? ((result.gflops - GflopsStats)) / GflopsStats * 100 : 0;
+                let isGFLOPS = result.gflops >= 1000 ? `${(result.gflops/1000).toFixed(2)} TFLOPS` : `${result.gflops.toFixed(2)} GFLOPS`;
+
+                if (changePercent >= 1.0) {
+                    gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="inc-percentage">▲ ${changePercent.toFixed(1)}%</span>`;
+                }
+                else if (changePercent <= -1.0) {
+                    gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="drop-percentage">▼ ${Math.abs(changePercent).toFixed(1)}%</span>`;
+                }
+                else {
+                    gflopsDisplay.innerHTML = isGFLOPS;
+                }
+
+                stressData.push({matrix: 'throttleTest', gflops: result.gflops});
+                AppState.currentGraphData = stressData;
+                plotPerformanceCurve(stressData);
 
                 await new Promise(resolve => setTimeout(resolve, 500)); // REVIEW maybe 0.5 sec is good but still need to check if UI is responsive or not
-            }
-       }}
+                }
+            }    
+        }
 
         if (performanceData.length > 0) {
             AppState.graphType.push({
@@ -208,7 +220,7 @@ export async function runGPU() {
                         gflopsDisplay.innerHTML = isGFLOPS;
                     }
                     
-                    stressData.push({matrix: null, gflops: gflops});
+                    stressData.push({matrix: 'throttleTest', gflops: gflops});
                     AppState.currentGraphData = stressData;
                     plotPerformanceCurve(stressData);
                 });
