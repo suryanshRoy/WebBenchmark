@@ -2,6 +2,7 @@ import {plotPerformanceCurve} from "./performanceCurve.js";
 import {GPU_ALU, runWebGPU} from "./gpu-engine.js";
 import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.js";
 import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize, stressTestCB} from "./UI-manager.js";
+import { WebGL_ALU } from "./webgl-engine.js";
 
 export const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
 
@@ -146,20 +147,30 @@ export async function runGPU() {
     const userPrecision = computeType.value;
 
     try {
-        const adapter = await navigator.gpu.requestAdapter();
-        if (!adapter) throw new Error("Sorry, this device does not support WebGPU, WebGL2 or WebGL. Please try a different device or browser.");
-        const requiredFeatures = [];
-        if (adapter.features.has('shader-f16')){
-            requiredFeatures.push('shader-f16');
+
+        let isWebGL = false;
+        let device = null;
+
+        const adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+
+        if (!adapter) {
+            console.warn("WebGPU is not supported. Falling back to WebGL2");
+            isWebGL = true;
         }
+        else {
+            const requiredFeatures = [];
+            if (adapter.features.has('shader-f16')){
+                requiredFeatures.push('shader-f16');
+            }
 
-        const bufferLimit = {
-            maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
-            maxBufferSize: adapter.limits.maxBufferSize,
-        };
+            const bufferLimit = {
+                maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
+                maxBufferSize: adapter.limits.maxBufferSize,
+            };
 
-        const device = await adapter.requestDevice({requiredFeatures, requiredLimits: bufferLimit});
-        AppState.activeGPUDevice = device;
+            const device = await adapter.requestDevice({requiredFeatures, requiredLimits: bufferLimit});
+            AppState.activeGPUDevice = device;
+        }
         
         let matrixSizes = [256, 512, 1024, 2048, 4096];
         if (matSize.value !== "default") {
@@ -172,119 +183,135 @@ export async function runGPU() {
         const runMat = matTestCB.checked || isStressTest;
         
         if (runMat) {
-            let maxMatSize = 256;
-            for (let size of matrixSizes) {
-                if (!AppState.isEngineRunning) break;
-                
-                gflopsDisplay.innerText = `Testing ${size}x${size}...`;
-                
-                const resultGflops = await runWebGPU(device, size, userIters, userPrecision, () => AppState.isEngineRunning);
-                
-                if (!AppState.isEngineRunning || resultGflops.gflops === 0) break;
-                
-                const currentGflops = resultGflops.gflops;
-                if (currentGflops > FinalGFLOPS) FinalGFLOPS = currentGflops;
-                maxMatSize = size; // since this is inside for loop, this will be the last successful size
-                
-                performanceData.push({matrix: size, gflops: currentGflops});
-                AppState.currentGraphData = performanceData;
-                plotPerformanceCurve(performanceData);
-
-                if (resultGflops.timeTakenSec > 1.5){
-                    console.warn(`Matrix ${size} took ${resultGflops.timeTakenSec.toFixed(2)}s. Stopping to prevent crash.`);
-                    break;
-                }
+            if (isWebGL) {
+                gflopsDisplay.innerText = "Running ALU test..."
+                await new Promise(resolve => setTimeout(resolve, 1500));
             }
-
-            if (isStressTest && AppState.isEngineRunning) {
-                gflopsDisplay.innerText = `Stress Test ${maxMatSize}x${maxMatSize}`;
-                let GflopsStats = 0;
-                let stressData = [];
-                
-                await runWebGPU(device, maxMatSize, userIters, userPrecision, () => AppState.isEngineRunning, (gflops) => {
-
-                    if (GflopsStats === 0) GflopsStats = gflops;
-                    let changePercent = GflopsStats > 0 ? ((gflops - GflopsStats)) / GflopsStats * 100 : 0; 
-
-                    gflopsDisplay.innerText = `Stress Test ${maxMatSize}x${maxMatSize}: ${gflops.toFixed(2)} GFLOPS`;
-
-                    let isGFLOPS = gflops >= 1000 ? `${(gflops/1000).toFixed(2)} TFLOPS` : `${gflops.toFixed(2)} GFLOPS`;
-
-                    if (changePercent >= 1.0) {
-                        gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="inc-percentage">▲ ${changePercent.toFixed(1)}%</span>`;
-                    }
-                    else if (changePercent <= -1.0) {
-                        gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="drop-percentage">▼ ${Math.abs(changePercent).toFixed(1)}%</span>`;
-                    }
-                    else {
-                        gflopsDisplay.innerHTML = isGFLOPS;
-                    }
+            else {
+                let maxMatSize = 256;
+                for (let size of matrixSizes) {
+                    if (!AppState.isEngineRunning) break;
                     
-                    stressData.push({matrix: 'throttleTest', gflops: gflops});
-                    AppState.currentGraphData = stressData;
-                    plotPerformanceCurve(stressData);
-                });
-            }
-            
-            if (performanceData.length > 0){
-                AppState.graphType.push({
-                name: "Matrix",
-                data: [...performanceData]
-                });
+                    gflopsDisplay.innerText = `Testing ${size}x${size}...`;
+                    
+                    const resultGflops = await runWebGPU(device, size, userIters, userPrecision, () => AppState.isEngineRunning);
+                    
+                    if (!AppState.isEngineRunning || resultGflops.gflops === 0) break;
+                    
+                    const currentGflops = resultGflops.gflops;
+                    if (currentGflops > FinalGFLOPS) FinalGFLOPS = currentGflops;
+                    maxMatSize = size; // since this is inside for loop, this will be the last successful size
+                    
+                    performanceData.push({matrix: size, gflops: currentGflops});
+                    AppState.currentGraphData = performanceData;
+                    plotPerformanceCurve(performanceData);
+
+                    if (resultGflops.timeTakenSec > 1.5){
+                        console.warn(`Matrix ${size} took ${resultGflops.timeTakenSec.toFixed(2)}s. Stopping to prevent crash.`);
+                        break;
+                    }
+                }
+
+                if (isStressTest && AppState.isEngineRunning) {
+                    gflopsDisplay.innerText = `Stress Test ${maxMatSize}x${maxMatSize}`;
+                    let GflopsStats = 0;
+                    let stressData = [];
+                    
+                    await runWebGPU(device, maxMatSize, userIters, userPrecision, () => AppState.isEngineRunning, (gflops) => {
+
+                        if (GflopsStats === 0) GflopsStats = gflops;
+                        let changePercent = GflopsStats > 0 ? ((gflops - GflopsStats)) / GflopsStats * 100 : 0; 
+
+                        let isGFLOPS = gflops >= 1000 ? `${(gflops/1000).toFixed(2)} TFLOPS` : `${gflops.toFixed(2)} GFLOPS`;
+
+                        if (changePercent >= 1.0) {
+                            gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="inc-percentage">▲ ${changePercent.toFixed(1)}%</span>`;
+                        }
+                        else if (changePercent <= -1.0) {
+                            gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="drop-percentage">▼ ${Math.abs(changePercent).toFixed(1)}%</span>`;
+                        }
+                        else {
+                            gflopsDisplay.innerHTML = isGFLOPS;
+                        }
+                        
+                        stressData.push({matrix: 'throttleTest', gflops: gflops});
+                        AppState.currentGraphData = stressData;
+                        plotPerformanceCurve(stressData);
+                    });
+                }
+                
+                if (performanceData.length > 0){
+                    AppState.graphType.push({
+                    name: "Matrix",
+                    data: [...performanceData]
+                    });
+                }
             }
         }
 
         if (AppState.isEngineRunning && aluTestCB.checked && !isStressTest) {
-            let displaySpeed = "";
-            displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
-            gflopsDisplay.innerText = displaySpeed;
+            let displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
+            if (FinalGFLOPS > 0) {
+                gflopsDisplay.innerText = displaySpeed
+            }
 
-            AppState.activeGPUDevice.destroy();
-            AppState.activeGPUDevice = null;
-        
+            if (AppState.activeGPUDevice){
+                AppState.activeGPUDevice.destroy();
+                AppState.activeGPUDevice = null;
+            }
+
             await new Promise(resolve => setTimeout(resolve, 3000));
             if (!AppState.isEngineRunning) return;
 
             statusText.innerText = 'Computing ALU Benchmark Test...'
             gflopsDisplay.innerText = 'Computing ALU Benchmark Test...';
 
-            const aluAdapter = await navigator.gpu.requestAdapter();
-            if (!aluAdapter || !AppState.isEngineRunning) {
-                return onFinishManager(false, FinalGFLOPS, 0);
-            }
-            const aluDevice = await aluAdapter.requestDevice();
-            AppState.activeGPUDevice = aluDevice;
-
-            if (!AppState.isEngineRunning) {
-                aluDevice.destroy();
-                AppState.activeGPUDevice = null;
-                return;
-            }
-            
             let aluResult = [];
-            const ResultAluGflops = await GPU_ALU(aluDevice, () => AppState.isEngineRunning, (gflops) => {
+            let ResultAluGflops = 0;
 
-            let displayText = "";
-            if (gflops >=1000){
-                displayText = `${(gflops / 1000).toFixed(2)} TFLOPS`;
+            if (isWebGL) { 
+                ResultAluGflops = await WebGL_ALU(() => AppState.isEngineRunning, (gflops) => {
+                    let displayText = gflops >= 1000 ? `${(gflops/1000).toFixed(2)} TFLOPS` : `${gflops.toFixed(2)} GFLOPS`;
+                    aluResult.push({matrix: null, gflops: gflops});
+                    AppState.currentGraphData = aluResult
+                    gflopsDisplay.innerText = displayText;
+                    plotPerformanceCurve(aluResult);
+                });
             }
             else {
-                displayText = `${gflops.toFixed(2)} GFLOPS`;
-            }
-            aluResult.push({matrix: null, gflops: gflops});
-            AppState.currentGraphData = aluResult;
-            gflopsDisplay.innerText = displayText;
-            plotPerformanceCurve(aluResult);
-            });
+                const aluAdapter = await navigator.gpu.requestAdapter();
+                if (!aluAdapter || !AppState.isEngineRunning) {
+                    return onFinishManager(false, FinalGFLOPS, 0);
+                }
+                const aluDevice = await aluAdapter.requestDevice();
+                AppState.activeGPUDevice = aluDevice;
 
+                if (!AppState.isEngineRunning) {
+                    aluDevice.destroy();
+                    AppState.activeGPUDevice = null;
+                    return;
+                }
+                
+                ResultAluGflops = await GPU_ALU(aluDevice, () => AppState.isEngineRunning, (gflops) => {
+
+                    let displayText = gflops >= 1000 ? `${(gflops / 1000).toFixed(2)} TFLOPS` : `${gflops.toFixed(2)} GFLOPS`;
+                    aluResult.push({matrix: null, gflops: gflops});
+                    AppState.currentGraphData = aluResult;
+                    gflopsDisplay.innerText = displayText;
+                    plotPerformanceCurve(aluResult);
+                });
+            }
+
+        if (aluResult.length > 0) {
             AppState.graphType.push({
                 name: "ALU", 
                 data: [...aluResult]
             });
             AppState.currentGraphNum = AppState.graphType.length - 1;
             AppState.currentGraphData = [...aluResult];
-            onFinishManager(true, FinalGFLOPS, ResultAluGflops);
         }
+        onFinishManager(true, FinalGFLOPS, ResultAluGflops);
+    }
         else if (AppState.isEngineRunning) {
             if (AppState.activeGPUDevice) {
                 AppState.activeGPUDevice.destroy();
