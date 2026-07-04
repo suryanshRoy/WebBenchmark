@@ -168,7 +168,7 @@ export async function runGPU() {
                 maxBufferSize: adapter.limits.maxBufferSize,
             };
 
-            const device = await adapter.requestDevice({requiredFeatures, requiredLimits: bufferLimit});
+            device = await adapter.requestDevice({requiredFeatures, requiredLimits: bufferLimit});
             AppState.activeGPUDevice = device;
         }
         
