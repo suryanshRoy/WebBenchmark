@@ -15,7 +15,7 @@ const optGPU = document.getElementById('opt-GPU');
 export const gpuWarnMsg = document.getElementById('gpu-warning-msg');
 export const cpuWarnMsg = document.getElementById('cpu-warning-msg');
 
-export const AppState = { // ai fixed issue 
+export const AppState = {
     currentProcessor: 'GPU',
     showGpuFallbackMsg: true,
     activeGPUDevice: null,
@@ -28,7 +28,7 @@ export const AppState = { // ai fixed issue
     RunTimeState: null
 };
 
-export function setCurrentProcessor(value) { // again ai fixed issue for ES6 or whatever it is
+export function setCurrentProcessor(value) {
     AppState.currentProcessor = value;
 }
 
@@ -64,7 +64,6 @@ startBtn.addEventListener('click', () => {
         warningMsg.innerText = "Error: WebGPU not supported on this device falling back to use WebGL if possible!";
         warningMsg.classList.add('show-warning');
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3000);
-        return;
     }
 
     statusText.innerText = `Running ${AppState.currentProcessor} Stress Test...`;

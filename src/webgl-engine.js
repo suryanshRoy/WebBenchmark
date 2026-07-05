@@ -52,14 +52,54 @@ export async function WebGL_ALU(isRunning, onUpdate) {
     const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
     gl.enableVertexAttribArray(positionAttributeLocation);
     gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.viewport(0, 0, canvas.width, canvas.height);
 
-    let durationMs = 10000; // 10 seconds
-    let dispatchCount = 50;
-    let flopsPerDraw = 50000 * 5;
+    const durationMs = 10000; // 10 seconds
+    const flopsPerIteration = 2;
+    const flopsPerDraw = 50000 * flopsPerIteration; //chunked iters of 50k
+    const calibrationTargetMs = 1200;
+    const maxChunkDraws = 4096;
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function drawBatch(drawCount) {
+        gl.useProgram(program);
+        for (let i = 0; i < drawCount; i++) {
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        const pixels = new Uint8Array(4);
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    }
 
     return new Promise((resolve) => {
-        const startTime = performance.now();
+        let startTime = performance.now();
         let currentGflops = 0;
+        let completedDraws = 0;
+        let chunkDraws = 1;
+
+        function calibrateChunkSize() {
+            let probeDraws = 1;
+            let probeMs = 0;
+
+            while (probeDraws <= maxChunkDraws) {
+                const probeStart = performance.now();
+                drawBatch(probeDraws);
+                probeMs = performance.now() - probeStart;
+
+                if (probeMs >= calibrationTargetMs) {
+                    break;
+                }
+                probeDraws *= 2;
+            }
+            const perDrawMs = Math.max(probeMs / probeDraws, 0.001);
+            return clamp(Math.round(calibrationTargetMs / perDrawMs), 1, maxChunkDraws);
+        }
+
+        chunkDraws = calibrateChunkSize();
+        startTime = performance.now();
     
         function render() {
             if ((isRunning && !isRunning()) || (performance.now() - startTime >= durationMs))  {
@@ -69,28 +109,26 @@ export async function WebGL_ALU(isRunning, onUpdate) {
             }
 
             const frameStart = performance.now();
-
-            gl.useProgram(program);
-            for (let i = 0; i < dispatchCount; i++) {
-                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            }
-
-            const pixels = new Uint8Array(4);
-            gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+            drawBatch(chunkDraws);
 
             const frameEnd = performance.now();
             const timeTaken = (frameEnd - frameStart) / 1000; // in seconds
+            completedDraws += chunkDraws;
 
-            if (timeTaken > 0) {
-                const totalFlops = flopsPerDraw * dispatchCount;
-                currentGflops = (totalFlops / timeTaken) / 1e9; // Convert to GFLOPS
+            const timeSpentSec = (frameEnd - startTime) / 1000;
+            if (timeSpentSec > 0) {
+                const totalFlops = flopsPerDraw * completedDraws;
+                currentGflops = (totalFlops / timeSpentSec) / 1e9; // Convert to GFLOPS
 
                 if (onUpdate) {
                     onUpdate(currentGflops);
                 }
+            }
 
-                const ratio = 100 / (frameEnd - frameStart);
-                dispatchCount = Math.max(1, Math.min(2000, Math.round(dispatchCount * ratio)));
+            if (timeTaken > (calibrationTargetMs / 1000)) {
+                chunkDraws = Math.max(1, Math.floor(chunkDraws * 0.75));
+            } else if (timeTaken < (calibrationTargetMs / 1000) * 0.5) {
+                chunkDraws = Math.min(maxChunkDraws, Math.max(chunkDraws + 1, Math.round(chunkDraws * 1.25)));
             }
 
             requestAnimationFrame(render);

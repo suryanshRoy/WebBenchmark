@@ -1,5 +1,5 @@
 import * as mainData from './main.js';
-import {updatePreciOption, aluTestCB, matTestCB} from './UI-manager.js';
+import {updatePreciOption, aluTestCB, matTestCB, isMatTest} from './UI-manager.js';
 import {setCurrentProcessor} from './main.js';
 
 export async function detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg) {
@@ -65,6 +65,7 @@ export function processorListner() {
             aluTestCB.parentElement.classList.add('hidden');
             aluTestCB.checked = false;
             matTestCB.checked = true;
+            isMatTest(true);
         }
         else {
             mainData.cpuWarnMsg.classList.add('hidden');
@@ -74,7 +75,19 @@ export function processorListner() {
 
             aluTestCB.parentElement.classList.remove('hidden');
             aluTestCB.checked = true;
+            isMatTest(!mainData.AppState.showGpuFallbackMsg);
         }
         updatePreciOption();
     });
+
+    const isCPU = mainData.AppState.currentProcessor === "CPU";
+    if (isCPU) {
+        aluTestCB.parentElement.classList.add('hidden');
+        matTestCB.checked = true;
+        isMatTest(true);
+    }
+    else {
+        aluTestCB.parentElement.classList.remove('hidden');
+        isMatTest(!mainData.AppState.showGpuFallbackMsg);
+    }
 }

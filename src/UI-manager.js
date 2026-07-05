@@ -60,6 +60,45 @@ export function showGraphBtn(showGraph){
     }
 }
 
+const matTestRow = matTestCB?.closest('.test-checkbox');
+const matSizeRow = matSize?.closest('.hardware-dd-container');
+
+export function isMatTest(isVisible) {
+    if (matTestRow) {
+        matTestRow.classList.toggle('hidden', !isVisible);
+    }
+    if (matSizeRow) {
+        matSizeRow.classList.toggle('hidden', !isVisible);
+    }
+
+    if (!isVisible) {
+        matTestCB.checked = false;
+    }
+}
+
+// won't have to convert flops again
+export function flopsFormat(gflops) {
+    if (!gflops) return "0.00 GFLOPS";
+    return gflops >= 1000 
+        ? `${(gflops / 1000).toFixed(2)} TFLOPS` 
+        : `${gflops.toFixed(2)} GFLOPS`;
+}
+
+export function stressChangeM(currentGflops, baselineGflops) { //manager
+    const displayFlops = flopsFormat(currentGflops);
+    if (!baselineGflops) return displayFlops;
+
+    const changePercent = ((currentGflops - baselineGflops) / baselineGflops) * 100;
+    
+    if (changePercent >= 1.0) {
+        return `${displayFlops} <span class="inc-percentage">▲ ${changePercent.toFixed(1)}%</span>`;
+    } else if (changePercent <= -1.0) {
+        return `${displayFlops} <span class="drop-percentage">▼ ${Math.abs(changePercent).toFixed(1)}%</span>`;
+    }
+    
+    return displayFlops;
+}
+
 function changeGraphNum(moveGraph){
     if (AppState.graphType.length <= 1) return;
     AppState.currentGraphNum += moveGraph;

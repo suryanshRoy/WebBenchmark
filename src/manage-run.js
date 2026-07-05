@@ -1,7 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {GPU_ALU, runWebGPU} from "./gpu-engine.js";
 import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.js";
-import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize, stressTestCB} from "./UI-manager.js";
+import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize, stressTestCB, flopsFormat, stressChangeM} from "./UI-manager.js";
 import { WebGL_ALU } from "./webgl-engine.js";
 
 export const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
@@ -100,20 +100,14 @@ export async function runCPU() {
                     break;
                 }
                 if (GflopsStats === 0) GflopsStats = result.gflops;
-                let changePercent = GflopsStats > 0 ? ((result.gflops - GflopsStats)) / GflopsStats * 100 : 0;
-                let isGFLOPS = result.gflops >= 1000 ? `${(result.gflops/1000).toFixed(2)} TFLOPS` : `${result.gflops.toFixed(2)} GFLOPS`;
+                const timeSpentSec = (performance.now() - startTime) / 1000;
 
-                if (changePercent >= 1.0) {
-                    gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="inc-percentage">▲ ${changePercent.toFixed(1)}%</span>`;
+                if (GflopsStats === 0) {
+                    GflopsStats = result.gflops;
                 }
-                else if (changePercent <= -1.0) {
-                    gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="drop-percentage">▼ ${Math.abs(changePercent).toFixed(1)}%</span>`;
-                }
-                else {
-                    gflopsDisplay.innerHTML = isGFLOPS;
-                }
+                gflopsDisplay.innerHTML = stressChangeM(result.gflops, GflopsStats);
 
-                stressData.push({matrix: 'throttleTest', gflops: result.gflops});
+                stressData.push({matrix: 'throttleTest', gflops: result.gflops, timeSpentSec});
                 AppState.currentGraphData = stressData;
                 plotPerformanceCurve(stressData);
 
@@ -154,7 +148,7 @@ export async function runGPU() {
         const adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
 
         if (!adapter) {
-            console.warn("WebGPU is not supported. Falling back to WebGL2");
+            console.warn("WebGPU is not supported. Falling back to WebGL or WebGL2 whatever possible!");
             isWebGL = true;
         }
         else {
@@ -183,9 +177,39 @@ export async function runGPU() {
         const runMat = matTestCB.checked || isStressTest;
         
         if (runMat) {
-            if (isWebGL) {
-                gflopsDisplay.innerText = "Running ALU test..."
-                await new Promise(resolve => setTimeout(resolve, 1500));
+            if (isWebGL) {  // NOTE the stress test in the webgl will use the alu cause matrix is impossible in the webgl mode
+                if (isStressTest) {
+                    gflopsDisplay.innerText = "Running ALU stress test...";
+                    const stressData = [];
+                    const stressStart = performance.now();
+                    let GflopsStats = 0;
+                    let lastUpdate = 0;
+
+                    while (AppState.isEngineRunning) {
+                        const resultGflops = await WebGL_ALU(() => AppState.isEngineRunning, (gflops) => {
+                            if (!AppState.isEngineRunning) return;
+
+                                const curTime = performance.now();
+
+                                if (curTime - lastUpdate >= 1000) {
+                                    lastUpdate = curTime;
+                                    const timeSpentSec = (curTime - stressStart) / 1000;
+                                
+                                if (GflopsStats === 0) {
+                                    GflopsStats = gflops;
+                                }
+                                gflopsDisplay.innerHTML = stressChangeM(gflops, GflopsStats);
+                                stressData.push({matrix: 'throttleTest', gflops, timeSpentSec});
+                                AppState.currentGraphData = stressData;
+                                plotPerformanceCurve(stressData);
+                            }
+                        });
+
+                        if (!AppState.isEngineRunning || resultGflops === 0) {
+                            break;
+                        }
+                    }
+                }
             }
             else {
                 let maxMatSize = 256;
@@ -216,27 +240,20 @@ export async function runGPU() {
                     gflopsDisplay.innerText = `Stress Test ${maxMatSize}x${maxMatSize}`;
                     let GflopsStats = 0;
                     let stressData = [];
+                    const stressStart = performance.now();
+                    let lastUpdate = 0;
                     
                     await runWebGPU(device, maxMatSize, userIters, userPrecision, () => AppState.isEngineRunning, (gflops) => {
+                        const curTime = performance.now();
+                        if (curTime - lastUpdate >= 1000) {
 
                         if (GflopsStats === 0) GflopsStats = gflops;
-                        let changePercent = GflopsStats > 0 ? ((gflops - GflopsStats)) / GflopsStats * 100 : 0; 
-
-                        let isGFLOPS = gflops >= 1000 ? `${(gflops/1000).toFixed(2)} TFLOPS` : `${gflops.toFixed(2)} GFLOPS`;
-
-                        if (changePercent >= 1.0) {
-                            gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="inc-percentage">▲ ${changePercent.toFixed(1)}%</span>`;
+                            const timeSpentSec = (performance.now() - stressStart) / 1000;
+                            gflopsDisplay.innerHTML = stressChangeM(gflops, GflopsStats);
+                            stressData.push({matrix: 'throttleTest', gflops: gflops, timeSpentSec});
+                            AppState.currentGraphData = stressData;
+                            plotPerformanceCurve(stressData);
                         }
-                        else if (changePercent <= -1.0) {
-                            gflopsDisplay.innerHTML = `${isGFLOPS} <span class ="drop-percentage">▼ ${Math.abs(changePercent).toFixed(1)}%</span>`;
-                        }
-                        else {
-                            gflopsDisplay.innerHTML = isGFLOPS;
-                        }
-                        
-                        stressData.push({matrix: 'throttleTest', gflops: gflops});
-                        AppState.currentGraphData = stressData;
-                        plotPerformanceCurve(stressData);
                     });
                 }
                 
@@ -268,14 +285,19 @@ export async function runGPU() {
 
             let aluResult = [];
             let ResultAluGflops = 0;
+            let lastUpdate = 0;
 
             if (isWebGL) { 
                 ResultAluGflops = await WebGL_ALU(() => AppState.isEngineRunning, (gflops) => {
-                    let displayText = gflops >= 1000 ? `${(gflops/1000).toFixed(2)} TFLOPS` : `${gflops.toFixed(2)} GFLOPS`;
-                    aluResult.push({matrix: null, gflops: gflops});
-                    AppState.currentGraphData = aluResult
-                    gflopsDisplay.innerText = displayText;
-                    plotPerformanceCurve(aluResult);
+                    const curTime = performance.now();
+
+                    if (curTime - lastUpdate >= 1000) {
+                        let displayText = gflops >= 1000 ? `${(gflops/1000).toFixed(2)} TFLOPS` : `${gflops.toFixed(2)} GFLOPS`;
+                        aluResult.push({matrix: null, gflops: gflops});
+                        AppState.currentGraphData = aluResult
+                        gflopsDisplay.innerText = displayText;
+                        plotPerformanceCurve(aluResult);
+                    }
                 });
             }
             else {

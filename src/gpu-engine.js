@@ -308,7 +308,7 @@ export async function GPU_ALU(device, isRunning, onUpdate){
     const durationMs = 10000; 
     const flopsPerDispatch = 32 * 2000 * threadsCount;
     // Start with 5 dispatches, auto-calibrate
-    let dispatchPerRun = 5; // ai helped calibration fix
+    let dispatchPerRun = 5;
 
     return new Promise((resolve) => {
         const startTime = performance.now();
