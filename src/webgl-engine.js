@@ -1,12 +1,32 @@
-import { vertexShaderSource, fragmentShaderSource } from './webgl-shader.js';
-
 export async function WebGL_ALU(isRunning, onUpdate) {
     const canvas = document.createElement('canvas');
-    canvas.width = 1; 
-    canvas.height = 1;
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    canvas.width = 2; 
+    canvas.height = 2;
+    
+    let gl = canvas.getContext('webgl2');
+    let isWebGL2 = true;
+
     if (!gl) {
-        console.error('neither WebGL2 nor the WebGL is not supported in this browser. :sob:');
+        gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        isWebGL2 = false;
+        console.warn("WebGL2 isn't supported on this device.")
+    }
+
+    if (!gl) {
+        console.error("Neither WebGL2 nor WebGL is supported on this device");
+        return 0; 
+    }
+
+    let vertexShaderSource, fragmentShaderSource;
+    try {
+        const shaderModule = isWebGL2 
+            ? await import('./webgl2-shader.js') 
+            : await import('./webgl-shader.js');
+            
+        vertexShaderSource = shaderModule.vertexShaderSource;
+        fragmentShaderSource = shaderModule.fragmentShaderSource;
+    } catch (error) {
+        console.error("Failed to load shader modules:", error);
         return 0;
     }
 

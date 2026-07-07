@@ -21,7 +21,7 @@ export async function detectUserGPU(cpuWarnMsg, optGPU, gpuWarnMsg) {
         }
         
         const canvas = document.createElement('canvas');
-        const glContext = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        const glContext = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
         if (glContext) {
             const debugInfo = glContext.getExtension('WEBGL_debug_renderer_info');
