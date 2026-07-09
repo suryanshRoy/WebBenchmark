@@ -73,9 +73,10 @@ export async function WebGL_ALU(isRunning, onUpdate) {
     gl.enableVertexAttribArray(positionAttributeLocation);
     gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
     gl.viewport(0, 0, canvas.width, canvas.height);
+    const seedLocation = gl.getUniformLocation(program, 'num');
 
     const durationMs = 10000; // 10 seconds
-    const flopsPerIteration = 2;
+    const flopsPerIteration = 8;
     const flopsPerDraw = 50000 * flopsPerIteration; //chunked iters of 50k
     const calibrationTargetMs = 1200;
     const maxChunkDraws = 4096;
@@ -86,6 +87,10 @@ export async function WebGL_ALU(isRunning, onUpdate) {
 
     function drawBatch(drawCount) {
         gl.useProgram(program);
+        if (seedLocation) {
+            gl.uniform1f(seedLocation, Math.random());
+        }
+
         for (let i = 0; i < drawCount; i++) {
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
