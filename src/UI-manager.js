@@ -19,6 +19,7 @@ export const matTestCB = document.getElementById("mat-test-checkbox");
 export const aluTestCB = document.getElementById("alu-test-checkbox");
 export const stressTestCB = document.getElementById("stress-test-checkbox");
 export const matSize = document.getElementById("matrix-size");
+export const memTestCB = document.getElementById("mem-test-cb")
 
 const panelHeader = document.getElementById('set-panel-header');
 const panelContent = document.getElementById('set-panel-content');
@@ -247,7 +248,7 @@ themeToggleBtn.addEventListener('click', () => {
     }
 });
 
-// for UI settings pop
+// for init settings on page load
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem("benchmark_appearance");
     if (savedTheme === 'light') {
@@ -258,12 +259,13 @@ document.addEventListener('DOMContentLoaded', () => {
         themeToggleBtn.innerText = "Switch to Light Mode"
     }
 
+    // iters management
     const savedIters = localStorage.getItem("benchmark_iters");
     if (savedIters) {
         iterInput.value = savedIters;
     }
-    // savedPrecision defined before cause it gets overwrite by simd
-    const savedPrecision = localStorage.getItem("benchmark_precision");
+
+    // simd management
     const storedSimd = localStorage.getItem("benchmark_simd") || 'true'; // default to true on first visit
     const savedSimd = storedSimd === 'true';
     simdCheckbox.checked = savedSimd;
@@ -273,14 +275,11 @@ document.addEventListener('DOMContentLoaded', () => {
         matTestCB.checked = savedMatTest === 'true';
     }
 
-    matSize.addEventListener('change', (e) => {
-        localStorage.setItem('benchmark_mat_size', e.target.value);
-    });
-
     const savedAluTest = localStorage.getItem("benchmark_alu_test");
     if (savedAluTest !== null) {
         aluTestCB.checked = savedAluTest === 'true';
     }
+
     const savedStressTest = localStorage.getItem("benchmark_stress_test");
     if (savedStressTest !== null) {
         stressTestCB.checked = savedStressTest === 'true';
@@ -288,6 +287,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updatePreciOption();
 
+    const savedMemTest = localStorage.getItem("benchmark_mem_test");
+    if (savedMemTest !== null) {
+        memTestCB.checked = savedMemTest === 'true';
+    }
+
+    const savedPrecision = localStorage.getItem("benchmark_precision");
     if (savedPrecision) {
         computeType.value = savedPrecision;
         localStorage.setItem("benchmark_precision", savedPrecision);
@@ -315,6 +320,10 @@ stressTestCB.addEventListener('change', (e) => {
 aluTestCB.addEventListener('change', (e) => {
     localStorage.setItem('benchmark_alu_test', e.target.checked);
 });
+
+memTestCB.addEventListener('change', (e) => {
+    localStorage.setItem('benchmark_mem_test', e.target.checked);
+})
 
 computeType.addEventListener('change', (e) => {
     localStorage.setItem('benchmark_precision', e.target.value);
@@ -357,7 +366,7 @@ export function toggleUILock(isLocked){
     processorSelect.disabled = isLocked;
     simdCheckbox.disabled = isLocked;
     matSize.disabled = isLocked;
-
+    memTestCB.disabled = isLocked;
     matTestCB.disabled = isLocked;
     advSettingsToggle.disabled = isLocked;
     stressTestCB.disabled = isLocked;

@@ -3,6 +3,7 @@ import {GPU_ALU, runWebGPU} from "./gpu-engine.js";
 import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.js";
 import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize, stressTestCB, flopsFormat, stressChangeM} from "./UI-manager.js";
 import { WebGL_ALU } from "./webgl-engine.js";
+import { memTestCB } from "./UI-manager.js";
 
 export const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
 
@@ -16,6 +17,11 @@ benchmarkWorker.onmessage = function(event) {
     }
     else if (data.type === 'UPDATE'){
         gflopsDisplay.innerText = `${data.gflops} GFLOPS`;
+    }
+
+    if (data.type === 'memResult') {
+        const gflops = data.result;
+        console.log(`CPU Memory Bandwidth: ${gflops.toFixed(2)} GB/s`);
     }
 };
 
@@ -264,6 +270,11 @@ export async function runGPU() {
                     });
                 }
             }
+        }
+
+        if (memTestCB.checked) {
+            statusText.innerText = "Finding Memory Bandwidth..."
+            benchmarkWorker.postMessage({type: 'Start_mem_band'});
         }
 
         if (AppState.isEngineRunning && aluTestCB.checked && !isStressTest) {

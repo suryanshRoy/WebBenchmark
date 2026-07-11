@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 #include <wasm_simd128.h>
+#include <chrono>
+#include <cstring>
 
 extern "C" {
     // Pointers for arrays
@@ -10,7 +12,7 @@ extern "C" {
     float* B = nullptr;
     float* C =nullptr;
 
-    // Store the initial curent size
+    // store the initial curent size
     int CURRENT_SIZE = 0;
 
     void init_memory(int matrix_size) {
@@ -27,7 +29,7 @@ extern "C" {
         B = (float*)malloc(total_elements * sizeof(float));
         C = (float*)malloc(total_elements * sizeof(float));
 
-        // feed matrices with dummy data
+        // fill matrices with dummy data to make it calculate up the mat mul
         for (int i=0; i<total_elements; i++) {
             A[i] = 1.0f;
             B[i] = 2.0f;
@@ -36,7 +38,7 @@ extern "C" {
     }
 
     float run_stress_test(int iterations, int precision_type) {
-        // Available CPU cores detection:
+        // find no. of cpu cores
         unsigned int num_threads = std::thread::hardware_concurrency();
         if (num_threads == 0) num_threads = 4; 
 
@@ -91,7 +93,7 @@ extern "C" {
                             for (int j= 0; j< CURRENT_SIZE; j += 2) {
                                 double b0 = (double)B[k * CURRENT_SIZE+ j];
                                 double b1 = (double)B[k * CURRENT_SIZE + j + 1];
-                                v128_t b_vec = wasm_f64x2_make(b0, b1); // pack double into 128bit simd register
+                                v128_t b_vec = wasm_f64x2_make(b0, b1);
 
                                 double c0 = (double)C[i * CURRENT_SIZE + j];
                                 double c1 = (double)C[i * CURRENT_SIZE + j + 1];
@@ -134,5 +136,40 @@ extern "C" {
         }
 
         return C[0];
+    }
+
+    float memBandTest(int array_SizeMB){
+
+        size_t totalByte = array_SizeMB * 1024 * 1024;
+        size_t numElem = totalByte / sizeof(float);
+
+        float* srcMem = (float*)malloc(numElem*sizeof(float));
+        float* dstMem = (float*)malloc(numElem * sizeof(float));
+
+        memset(srcMem, 1, totalByte);
+        memset(dstMem, 0, totalByte);
+
+        volatile float rand_val = 0.0f;
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i=0; i<100; i++){ // REVIEW may need to change looop more or less depends on dev!!!
+            memcpy(dstMem, srcMem, totalByte); // copy source mem to destination mem
+
+            rand_val += dstMem[i % numElem];
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+
+        std::chrono::duration<float> duration = end - start;
+        float sec = duration.count();
+
+        free(srcMem);
+        free(dstMem);
+
+        size_t byteMoved = totalByte * 100 * 2;
+
+        float GB_s = (float)byteMoved / sec / 1e9f;
+
+        return GB_s;
     }
 }

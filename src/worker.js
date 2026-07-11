@@ -1,7 +1,7 @@
 const DEFAULT_MAT_SIZE = 512;
 const FLOP_PER_ITERATION = 2 * Math.pow(DEFAULT_MAT_SIZE, 3);
 
-let engineInstance = null;
+let engModule = null;
 let isEngineRunning = false;
 
 let basePath = '/';
@@ -18,8 +18,8 @@ createEngine({
     }
 }).then((Module) => {
     console.log("ENGINE LOADED!");
-    engineInstance = Module;
-    engineInstance._init_memory(DEFAULT_MAT_SIZE);
+    engModule = Module;
+    engModule._init_memory(DEFAULT_MAT_SIZE);
     
     postMessage({type: 'READY'});
 }).catch((error) => {
@@ -27,11 +27,11 @@ createEngine({
 });
 
 function runBenchmarkLoop(iterations, precisionType = 0) {
-    if (!isEngineRunning || !engineInstance) return;
+    if (!isEngineRunning || !engModule) return;
 
     const startTime = performance.now();
     
-    engineInstance._run_stress_test(iterations, precisionType);
+    engModule._run_stress_test(iterations, precisionType);
 
     const endTime = performance.now();
     const timeTakenSeconds = (endTime-startTime) / 1000;
@@ -52,7 +52,7 @@ self.onmessage = function(event) {
     if(event.data.type === 'START') {
         isEngineRunning = true;
         // Reset mem to default
-        engineInstance._init_memory(DEFAULT_MAT_SIZE);
+        engModule._init_memory(DEFAULT_MAT_SIZE);
 
         let preciType = 0;
         if (event.data.precision === "f64-scalar"){
@@ -67,7 +67,7 @@ self.onmessage = function(event) {
         runBenchmarkLoop(event.data.iterations, preciType);
     }
     else if (event.data.type === "START_2") {
-        if (!engineInstance) return;
+        if (!engModule) return;
 
         const matrixSize = event.data.matrix;
         const iterations = event.data.iterations;
@@ -81,16 +81,16 @@ self.onmessage = function(event) {
             pType = 3;
         }
 
-        engineInstance._init_memory(matrixSize); // reallocate c++ mem
+        engModule._init_memory(matrixSize); // reallocate c++ mem
 
         const startTime = performance.now();
-        engineInstance._run_stress_test(iterations, pType);
+        engModule._run_stress_test(iterations, pType);
         const end_time = performance.now();
 
         const timeTakenSec = (end_time - startTime) /1000;
         const totalFlops = (2 * Math.pow(matrixSize, 3)) * iterations;
         const gflops = (totalFlops / timeTakenSec) / 1e9;
-
+// j matrix
         this.postMessage({
             type: 'RUN2_COMPLETE',
             gflops: gflops.toFixed(2),
@@ -99,5 +99,14 @@ self.onmessage = function(event) {
     }
     else if (event.data.type === 'STOP'){
         isEngineRunning = false;
+    }
+
+    if (event.data.type === 'Start_mem_band'){
+        const arraySizeMB = 128;
+        const gbps = engModule._memBandTest(arraySizeMB);
+
+        self.postMessage({
+            type: 'memResult', result: gbps
+        });
     }
 };
