@@ -29,7 +29,7 @@ benchmarkWorker.onerror = function(error) {
     console.error("Worker error: ", error);
 };
 
-// Memory based computation
+// Memory based matr computation
 export function cpuMatRun(size, iterations, precision) {
     return new Promise((resolve) => {
         const listner = (e) => {
@@ -44,6 +44,23 @@ export function cpuMatRun(size, iterations, precision) {
             matrix: size,
             iterations: iterations,
             precision: precision 
+        });
+    });
+}
+
+export function runMemCPU(sizeMB, runType){
+    return new Promise((resolve) => {
+        const listner = (e) =>{
+            if (e.data.type === 'memResult'){
+                benchmarkWorker.removeEventListener('message', listner);
+                resolve(parseFloat(e.data.result));
+            }
+        };
+        benchmarkWorker.addEventListener('message', listner);
+        benchmarkWorker.postMessage({
+            type: 'Start_mem_band',
+            sizeMB: sizeMB,
+            runType : runType
         });
     });
 }
@@ -66,6 +83,7 @@ export async function runCPU() {
         }
         let performanceData = [];
         let FinalGFLOPS = 0;
+        let mem_result = 0;
         const isStressTest = stressTestCB.checked;
         const runMat = matTestCB.checked || isStressTest;
 
@@ -122,6 +140,55 @@ export async function runCPU() {
             }    
         }
 
+        if (memTestCB.checked && AppState.isEngineRunning && !isStressTest) {
+            const memorySizes = [32, 64, 128, 256];
+            const testTypes = [
+                {id: 1, name: 'Read'},
+                {id: 2, name: 'Write'},
+                {id: 0, name: 'Copy'}
+            ];
+
+            for (let type of testTypes) {
+
+                let currentMem = [];
+                for (let size of memorySizes){
+
+                    if (!AppState.isEngineRunning){
+                        break;
+                    }
+
+                    statusText.innerText = `Testing Bandwidth ${type.name} ${size}MB...`;
+                    gflopsDisplay.innerText = `Calculating ${type.name} speed...`;
+
+                    const gbps = await runMemCPU(size, type.id);
+
+                    if (gbps > mem_result) {
+                        mem_result = gbps;
+                    }
+
+                    currentMem.push({matrix: `${size}MB`, gflops: gbps});
+
+                    if (!runMat) {
+                        AppState.currentGraphData = currentMem;
+                        plotPerformanceCurve(currentMem);
+                    }
+                }
+
+                if (currentMem.length > 0){
+
+                    AppState.graphType.push({
+                        name: `Memory ${type.name}`,
+                        data: [...currentMem]
+                    });
+                }
+            }
+
+            if (!runMat && AppState.graphType.length > 0){
+                AppState.currentGraphNum = 0;
+                AppState.currentGraphData = AppState.graphType[0].data;
+            }
+        }
+
         if (performanceData.length > 0) {
             AppState.graphType.push({
                 name: "Matrix",
@@ -129,7 +196,20 @@ export async function runCPU() {
             });
             showGraphBtn(true);
         }
-        onFinishManager(false, FinalGFLOPS, 0);
+        if (AppState.isEngineRunning) {
+            if (mem_result > 0 && FinalGFLOPS === 0){
+                gflopsDisplay.innerText = `${mem_result.toFixed(2)} GB/s`;
+                statusText.innerText = `Completed`;
+                statusText.classList.remove("running");
+                statusText.classList.add('idle');
+                stopBtn.classList.add("is-disabled");
+                AppState.isEngineRunning = false;
+                toggleUILock(false);
+            }
+            else{
+                onFinishManager(false, FinalGFLOPS, 0);
+            }
+        }
     }
     catch (error) {
         handleError("CPU", error);
@@ -270,11 +350,6 @@ export async function runGPU() {
                     });
                 }
             }
-        }
-
-        if (memTestCB.checked) {
-            statusText.innerText = "Finding Memory Bandwidth..."
-            benchmarkWorker.postMessage({type: 'Start_mem_band'});
         }
 
         if (AppState.isEngineRunning && aluTestCB.checked && !isStressTest) {

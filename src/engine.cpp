@@ -138,24 +138,64 @@ extern "C" {
         return C[0];
     }
 
-    float memBandTest(int array_SizeMB){
+    float memBandTest(int array_SizeMB, int run_type){
 
         size_t totalByte = array_SizeMB * 1024 * 1024;
         size_t numElem = totalByte / sizeof(float);
 
-        float* srcMem = (float*)malloc(numElem*sizeof(float));
-        float* dstMem = (float*)malloc(numElem * sizeof(float));
+        float* srcMem = (float*)malloc(totalByte);
+        float* dstMem = (float*)malloc(totalByte);
 
         memset(srcMem, 1, totalByte);
         memset(dstMem, 0, totalByte);
 
+        unsigned int threads = std::thread::hardware_concurrency();
+        if (threads == 0) threads =4;
+
+        size_t ElemPerThread = (numElem / threads / 4) * 4;
+        std::vector<std::thread> workers;
+
         volatile float rand_val = 0.0f;
         auto start = std::chrono::high_resolution_clock::now();
+        int num_loop = 100;
 
-        for (int i=0; i<100; i++){ // REVIEW may need to change looop more or less depends on dev!!!
-            memcpy(dstMem, srcMem, totalByte); // copy source mem to destination mem
+        auto workerTask = [&](size_t start_idx, size_t end_idx) {
+            if (run_type == 0) {
+                size_t byte_count = (end_idx - start_idx) * sizeof(float);
+                for (int i=0; i < num_loop; i++){
+                    memcpy(&dstMem[start_idx], &srcMem[start_idx], byte_count); // copy source mem to destination mem
+                }
+                rand_val += dstMem[start_idx];
+            }
+            else if(run_type == 1) {
+                v128_t dum_data = wasm_f32x4_splat(0.0f);
+                for (int j=0; j< num_loop; j++){
+                    for(size_t k = start_idx; k < end_idx; k+=4){
+                        dum_data = wasm_f32x4_add(dum_data, wasm_v128_load(&srcMem[k]));
+                    }
+                }
+                wasm_v128_store(&dstMem[start_idx], dum_data);
+                rand_val += dstMem[start_idx];
+            }
+            else if (run_type == 2){
+                v128_t dum_data = wasm_f32x4_splat(1.0f);
+                for (int m = 0; m < num_loop; m++){
+                    for (size_t n = start_idx; n < end_idx; n += 4){
+                        wasm_v128_store(&dstMem[n], dum_data);
+                    }
+                }
+                rand_val += dstMem[start_idx];
+            }
+        };
 
-            rand_val += dstMem[i % numElem];
+        for (unsigned int t=0; t< threads; t++){
+            size_t start_idx = t * ElemPerThread;
+            size_t end_indx = (t == threads - 1) ? numElem : start_idx + ElemPerThread;
+            workers.push_back(std::thread(workerTask, start_idx, end_indx));
+        }
+
+        for (auto& t: workers){
+            t.join();
         }
 
         auto end = std::chrono::high_resolution_clock::now();
@@ -166,7 +206,7 @@ extern "C" {
         free(srcMem);
         free(dstMem);
 
-        size_t byteMoved = totalByte * 100 * 2;
+        size_t byteMoved = totalByte * num_loop * (run_type == 0 ? 2 : 1);
 
         float GB_s = (float)byteMoved / sec / 1e9f;
 

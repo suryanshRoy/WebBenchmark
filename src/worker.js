@@ -102,11 +102,12 @@ self.onmessage = function(event) {
     }
 
     if (event.data.type === 'Start_mem_band'){
-        const arraySizeMB = 128;
-        const gbps = engModule._memBandTest(arraySizeMB);
+        const arraySizeMB = event.data.sizeMB || 128;
+        const runType = event.data.runType || 0;
+        const gbps = engModule._memBandTest(arraySizeMB, runType);
 
         self.postMessage({
-            type: 'memResult', result: gbps
+            type: 'memResult', result: gbps, runType: runType
         });
     }
 };
