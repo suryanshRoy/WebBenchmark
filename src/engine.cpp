@@ -7,12 +7,10 @@
 #include <cstring>
 
 extern "C" {
-    // Pointers for arrays
     float* A = nullptr;
     float* B = nullptr;
     float* C =nullptr;
 
-    // store the initial curent size
     int CURRENT_SIZE = 0;
 
     void init_memory(int matrix_size) {
@@ -29,7 +27,7 @@ extern "C" {
         B = (float*)malloc(total_elements * sizeof(float));
         C = (float*)malloc(total_elements * sizeof(float));
 
-        // fill matrices with dummy data to make it calculate up the mat mul
+        //fill matrices with dummy data to make it calculate up the mat mul
         for (int i=0; i<total_elements; i++) {
             A[i] = 1.0f;
             B[i] = 2.0f;
@@ -42,7 +40,6 @@ extern "C" {
         unsigned int num_threads = std::thread::hardware_concurrency();
         if (num_threads == 0) num_threads = 4; 
 
-        // No. of matrix rows each thread gets
         int rows_per_thread = CURRENT_SIZE / num_threads;
         std::vector<std::thread> workers;
 
@@ -53,14 +50,18 @@ extern "C" {
                         C[i * CURRENT_SIZE + j] = 0.0f;
                     }
                 }
-                // Float4 32bit (simd 128-bit)
+                //Float4 32bit (simd 128-bit)
                 if (precision_type == 2) {
                     
                     for (int i = start_row; i < end_row; i++){
                         for (int k = 0; k < CURRENT_SIZE; k++) {
+
                             v128_t a_ik = wasm_f32x4_splat(A[i * CURRENT_SIZE + k]);
+
                             for (int j = 0; j < CURRENT_SIZE; j +=4) {
+                                
                                 v128_t b_vec = wasm_v128_load(&B[k * CURRENT_SIZE + j]);
+
                                 v128_t c_vec = wasm_v128_load(&C[i * CURRENT_SIZE + j]);
 
                                 v128_t prod = wasm_f32x4_mul(a_ik, b_vec);
@@ -71,11 +72,13 @@ extern "C" {
                         }
                     }
                 }
-                // f64 scalar
+                //f64 scalar
                 else if (precision_type == 1) {
                     for (int i = start_row; i < end_row; i++){
+                        
                         for (int k = 0; k < CURRENT_SIZE; k++){
                             double a_ik = (double)A[i * CURRENT_SIZE + k];
+
                             for (int j = 0; j< CURRENT_SIZE; j++){
                                 double b_kj = (double)B[k*CURRENT_SIZE+ j];
                                 C[i * CURRENT_SIZE + j] += (float)(a_ik * b_kj);
@@ -91,14 +94,18 @@ extern "C" {
                             v128_t a_ik = wasm_f64x2_splat((double)A[i * CURRENT_SIZE + k]);
 
                             for (int j= 0; j< CURRENT_SIZE; j += 2) {
+
                                 double b0 = (double)B[k * CURRENT_SIZE+ j];
                                 double b1 = (double)B[k * CURRENT_SIZE + j + 1];
                                 v128_t b_vec = wasm_f64x2_make(b0, b1);
 
                                 double c0 = (double)C[i * CURRENT_SIZE + j];
                                 double c1 = (double)C[i * CURRENT_SIZE + j + 1];
+
                                 v128_t c_vec = wasm_f64x2_make(c0, c1);
+
                                 v128_t prod = wasm_f64x2_mul(a_ik, b_vec);
+
                                 c_vec = wasm_f64x2_add(c_vec, prod);
 
                                 C[i * CURRENT_SIZE + j] = (float)wasm_f64x2_extract_lane(c_vec, 0);
@@ -112,8 +119,10 @@ extern "C" {
 
                     for (int i = start_row; i < end_row; i++) {
                         for (int k = 0; k<CURRENT_SIZE; k++){
+
                             float a_ik = A[i * CURRENT_SIZE + k];
                             for (int j = 0; j < CURRENT_SIZE; j++) {
+                                
                                 C[i * CURRENT_SIZE + j] += a_ik * B[k * CURRENT_SIZE + j];
                             }
                         }
@@ -122,7 +131,7 @@ extern "C" {
             }
         };        
 
-        // Spawn threads for each chunk of mat
+        // spawn threads for each chunk of mat
         for (unsigned int t=0; t<num_threads; t++) {
             int start_row = t* rows_per_thread;
             int end_row = (t == num_threads - 1) ? CURRENT_SIZE: start_row+rows_per_thread;
@@ -130,7 +139,7 @@ extern "C" {
             workers.push_back(std::thread(worker_task, start_row, end_row));
         }
 
-        // wait for all cores to finish math
+        //wait for all cores to finish math
         for (auto& t: workers) {
             t.join();
         }
@@ -145,6 +154,15 @@ extern "C" {
 
         float* srcMem = (float*)malloc(totalByte);
         float* dstMem = (float*)malloc(totalByte);
+
+        if (srcMem == nullptr || dstMem== nullptr){
+            if (srcMem) {
+                free(srcMem);
+            }
+            if (dstMem){
+                free(dstMem);
+            }
+        }
 
         memset(srcMem, 1, totalByte);
         memset(dstMem, 0, totalByte);
@@ -162,6 +180,7 @@ extern "C" {
         auto workerTask = [&](size_t start_idx, size_t end_idx) {
             if (run_type == 0) {
                 size_t byte_count = (end_idx - start_idx) * sizeof(float);
+
                 for (int i=0; i < num_loop; i++){
                     memcpy(&dstMem[start_idx], &srcMem[start_idx], byte_count); // copy source mem to destination mem
                 }
@@ -169,6 +188,7 @@ extern "C" {
             }
             else if(run_type == 1) {
                 v128_t dum_data = wasm_f32x4_splat(0.0f);
+
                 for (int j=0; j< num_loop; j++){
                     for(size_t k = start_idx; k < end_idx; k+=4){
                         dum_data = wasm_f32x4_add(dum_data, wasm_v128_load(&srcMem[k]));
@@ -179,8 +199,10 @@ extern "C" {
             }
             else if (run_type == 2){
                 v128_t dum_data = wasm_f32x4_splat(1.0f);
+
                 for (int m = 0; m < num_loop; m++){
                     for (size_t n = start_idx; n < end_idx; n += 4){
+
                         wasm_v128_store(&dstMem[n], dum_data);
                     }
                 }
@@ -191,6 +213,7 @@ extern "C" {
         for (unsigned int t=0; t< threads; t++){
             size_t start_idx = t * ElemPerThread;
             size_t end_indx = (t == threads - 1) ? numElem : start_idx + ElemPerThread;
+            
             workers.push_back(std::thread(workerTask, start_idx, end_indx));
         }
 

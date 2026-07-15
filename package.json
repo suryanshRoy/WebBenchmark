@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "build:wasm": "emcc src/engine.cpp -o public/engine.js -O3 -s WASM=1 -s EXPORTED_FUNCTIONS=\"['_init_memory', '_run_stress_test', '_memBandTest']\" -s EXPORTED_RUNTIME_METHODS=\"['ccall', 'cwrap']\" -msimd128 -pthread -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=256MB -s MODULARIZE=1 -s EXPORT_NAME=\"createEngine\"",
+    "build:wasm": "emcc src/engine.cpp -o public/engine.js -O3 -s WASM=1 -s EXPORTED_FUNCTIONS=\"['_init_memory', '_run_stress_test', '_memBandTest']\" -s EXPORTED_RUNTIME_METHODS=\"['ccall', 'cwrap']\" -msimd128 -pthread -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=4294967296 -s INITIAL_MEMORY=256MB -s MODULARIZE=1 -s EXPORT_NAME=\"createEngine\"",
     "preview": "vite preview"
   },
   "keywords": [],
