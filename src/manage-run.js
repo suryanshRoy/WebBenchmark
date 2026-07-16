@@ -62,6 +62,7 @@ export function runMemCPU(sizeMB, runType){
             sizeMB: sizeMB,
             runType : runType
         });
+        console.log(`Current size: ${sizeMB}MB, runType: ${runType}`);
     });
 }
 
@@ -141,7 +142,7 @@ export async function runCPU() {
         }
 
         if (memTestCB.checked && AppState.isEngineRunning && !isStressTest) {
-            const memorySizes = [32, 64, 128, 256];
+            const memorySizes = [0.256, 0.512, 0.64, 1, 2 ,4 ,8 ,16 , 32, 64, 128, 256]; // NOTE you can add any value that u want to so test run on that size
             const testTypes = [
                 {id: 1, name: 'Read'},
                 {id: 2, name: 'Write'},
@@ -157,7 +158,8 @@ export async function runCPU() {
                         break;
                     }
 
-                    statusText.innerText = `Testing Bandwidth ${type.name} ${size}MB...`;
+                    let convSize = size < 1 ? `${size * 1024}KB` : `${size}MB`;
+                    statusText.innerText = `Testing Bandwidth ${type.name} ${convSize}...`;
                     gflopsDisplay.innerText = `Calculating ${type.name} speed...`;
 
                     const gbps = await runMemCPU(size, type.id);

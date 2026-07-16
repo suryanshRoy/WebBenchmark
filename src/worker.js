@@ -102,7 +102,7 @@ self.onmessage = function(event) {
     }
 
     if (event.data.type === 'Start_mem_band'){
-        const arraySizeMB = event.data.sizeMB || 128;
+        const arraySizeMB = parseFloat(event.data.sizeMB) || 128;
         const runType = event.data.runType || 0;
         const gbps = engModule._memBandTest(arraySizeMB, runType);
 

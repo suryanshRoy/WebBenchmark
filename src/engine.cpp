@@ -147,10 +147,13 @@ extern "C" {
         return C[0];
     }
 
-    float memBandTest(int array_SizeMB, int run_type){
+    float memBandTest(float array_SizeMB, int run_type){
 
-        size_t totalByte = array_SizeMB * 1024 * 1024;
+        size_t totalByte = (size_t)(array_SizeMB * 1024.0f * 1024.0f);
         size_t numElem = totalByte / sizeof(float);
+        
+        numElem = (numElem / 16) * 16; // NOTE num element. should be multiple of 16 for 4x instructions
+        totalByte = numElem * sizeof(float);
 
         float* srcMem = (float*)malloc(totalByte);
         float* dstMem = (float*)malloc(totalByte);
@@ -162,6 +165,7 @@ extern "C" {
             if (dstMem){
                 free(dstMem);
             }
+            return 0.0f;
         }
 
         memset(srcMem, 1, totalByte);
@@ -170,15 +174,20 @@ extern "C" {
         unsigned int threads = std::thread::hardware_concurrency();
         if (threads == 0) threads =4;
 
-        size_t ElemPerThread = (numElem / threads / 4) * 4;
+        size_t ElemPerThread = (numElem / threads / 16) * 16;
         std::vector<std::thread> workers;
 
         volatile float rand_val = 0.0f;
         auto start = std::chrono::high_resolution_clock::now();
-        int num_loop = 100;
+        int num_loop = (int)(2048.0f / array_SizeMB);
+
+        if (num_loop < 10){
+            num_loop = 10;
+        }
 
         auto workerTask = [&](size_t start_idx, size_t end_idx) {
-            if (run_type == 0) {
+
+            if (run_type == 0) { // for mem copy speed
                 size_t byte_count = (end_idx - start_idx) * sizeof(float);
 
                 for (int i=0; i < num_loop; i++){
@@ -186,24 +195,42 @@ extern "C" {
                 }
                 rand_val += dstMem[start_idx];
             }
-            else if(run_type == 1) {
-                v128_t dum_data = wasm_f32x4_splat(0.0f);
+            else if(run_type == 1) {// for mem read speed 
+
+                // NOTE instructing 4x time due to browser timers to get accurate results
+                v128_t dum1 = wasm_f32x4_splat(0.0f);
+                v128_t dum2 = wasm_f32x4_splat(0.0f);
+                v128_t dum3 = wasm_f32x4_splat(0.0f);
+                v128_t dum4 = wasm_f32x4_splat(0.0f);
+
 
                 for (int j=0; j< num_loop; j++){
-                    for(size_t k = start_idx; k < end_idx; k+=4){
-                        dum_data = wasm_f32x4_add(dum_data, wasm_v128_load(&srcMem[k]));
+                    for(size_t k = start_idx; k < end_idx; k+=16){
+
+                        dum1 = wasm_f32x4_add(dum1, wasm_v128_load(&srcMem[k]));
+                        dum2 = wasm_f32x4_add(dum2, wasm_v128_load(&srcMem[k+4]));
+                        dum3 = wasm_f32x4_add(dum3, wasm_v128_load(&srcMem[k+8]));
+                        dum4 = wasm_f32x4_add(dum4, wasm_v128_load(&srcMem[k+12]));
                     }
                 }
-                wasm_v128_store(&dstMem[start_idx], dum_data);
+                dum1 = wasm_f32x4_add(dum1, dum2);
+                dum3 = wasm_f32x4_add(dum3, dum4);
+                dum1 = wasm_f32x4_add(dum1, dum3);
+
+                wasm_v128_store(&dstMem[start_idx], dum1);
                 rand_val += dstMem[start_idx];
             }
-            else if (run_type == 2){
+            else if (run_type == 2){// for mem write speed
                 v128_t dum_data = wasm_f32x4_splat(1.0f);
 
                 for (int m = 0; m < num_loop; m++){
-                    for (size_t n = start_idx; n < end_idx; n += 4){
+                    for (size_t n = start_idx; n < end_idx; n += 16){
 
                         wasm_v128_store(&dstMem[n], dum_data);
+                        wasm_v128_store(&dstMem[n+4], dum_data);
+                        wasm_v128_store(&dstMem[n+8], dum_data);
+                        wasm_v128_store(&dstMem[n+12], dum_data);
+
                     }
                 }
                 rand_val += dstMem[start_idx];
@@ -229,7 +256,7 @@ extern "C" {
         free(srcMem);
         free(dstMem);
 
-        size_t byteMoved = totalByte * num_loop * (run_type == 0 ? 2 : 1);
+        double byteMoved = (double)totalByte * (double)num_loop * (run_type == 0 ? 2.0 : 1.0);
 
         float GB_s = (float)byteMoved / sec / 1e9f;
 
