@@ -52,4 +52,4 @@
 
 # MIT LICENSE
 > [!WARNING]
-> This project is under MIT license so the we are not responsible for any kind of damage to your device! **Please use it on your own risk!**
+> This project is under MIT license so we are not responsible for any damage or issues caused to your device! **Please use it at your own risk!**
