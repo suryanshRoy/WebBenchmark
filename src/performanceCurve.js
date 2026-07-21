@@ -1,3 +1,55 @@
+const memResElem = {
+    read: document.getElementById('memory-read-speed'),
+    write: document.getElementById('memory-write-speed'),
+    copy: document.getElementById('memory-copy-speed')
+};
+
+const canv = document.getElementById('gflops-canvas');
+const Mem_vis = document.getElementById('mem-visualizer');
+const memResult = document.getElementById('memory-results');
+const resultF = document.getElementById('gflops-current');
+const rawOut = document.getElementById('raw-terminal');
+
+export function showMemVis(show) {
+    canv?.classList.toggle('hidden', show);
+    Mem_vis?.classList.toggle('hidden', !show);
+    resultF?.classList.toggle('hidden', show);
+    memResult?.classList.toggle('hidden', !show);
+}
+
+export function resetMemVis() {
+    showMemVis(false);
+    rawOut?.replaceChildren();
+
+    for (const type of Object.keys(memResElem)) {
+        const bar = document.getElementById(`mem-bar-${type}`);
+        const value = document.getElementById(`mem-val-${type}`);
+        if (bar) bar.style.width = '0%';
+        if (value) value.innerText = '0 GB/s';
+        if (memResElem[type]) memResElem[type].innerText = '0.00 GB/s';
+    }
+}
+
+export function updateMemVis(type, speed, maxMemBand) {
+    const bar = document.getElementById(`mem-bar-${type}`);
+    const value = document.getElementById(`mem-val-${type}`);
+    const percentage = Math.min((speed / maxMemBand) * 100, 100);
+
+    if (bar) bar.style.width = `${percentage}%`;
+    if (value) value.innerText = `${speed.toFixed(0)} GB/s`;
+    if (memResElem[type]) memResElem[type].innerText = `${speed.toFixed(2)} GB/s`;
+}
+
+export function addMemLog(message, isHeading = false) {
+    if (!rawOut) return;
+
+    const line = document.createElement('div');
+    line.innerText = message;
+    if (isHeading) line.classList.add('mem-log');
+    rawOut.append(line);
+    rawOut.scrollTop = rawOut.scrollHeight;
+}
+
 export function plotPerformanceCurve(performanceData) {
     const canvas = document.getElementById('gflops-canvas'); 
     if (!canvas) return;

@@ -139,6 +139,11 @@
                         <div class="metric-box">
                             <h3>Computed Result</h3>
                             <span id="gflops-current">0.00 GFLOPS</span>
+                            <div id="memory-results" class="memory-results hidden" aria-live="polite">
+                                <span>Read: <strong id="memory-read-speed">0.00 GB/s</strong></span>
+                                <span>Write: <strong id="memory-write-speed">0.00 GB/s</strong></span>
+                                <span>Copy: <strong id="memory-copy-speed">0.00 GB/s</strong></span>
+                            </div>
                         </div>
 
                         <div class="metric-box" id="stress-time-box" style="display: none;">
@@ -184,6 +189,29 @@
                             <div class="canvas-container">
                                 <canvas id="gflops-canvas"></canvas>
                                 <div class="placeholder-text">Visualizer</div>
+                                <div id="mem-visualizer" class="hidden">
+                                    <div class="mem-bars-container">
+                                        <div class="mem-bar-row">
+                                            <span class="mem-label">READ</span>
+                                            <div class="mem-track"><div id="mem-bar-read" class="mem-fill"></div></div>
+                                            <span id="mem-val-read" class="mem-value">0 GB/s</span>
+                                        </div>
+                                        <div class="mem-bar-row">
+                                            <span class="mem-label">WRITE</span>
+                                            <div class="mem-track"><div id="mem-bar-write" class="mem-fill"></div></div>
+                                            <span id="mem-val-write" class="mem-value">0 GB/s</span>
+                                        </div>
+                                        <div class="mem-bar-row">
+                                            <span class="mem-label">COPY</span>
+                                            <div class="mem-track"><div id="mem-bar-copy" class="mem-fill"></div></div>
+                                            <span id="mem-val-copy" class="mem-value">0 GB/s</span>
+                                        </div>
+                                    </div>
+                                    <div class="mem-divider"></div> <!-- line break -->
+                                    <div id="raw-output-section">
+                                        <div id="raw-terminal" class="terminal-box"></div>
+                                    </div>
+                                </div>
                                 <button type="button" title="Show previous performance graph" class="arrow-btn left-btn hidden" id="prev-btn">
                                     <span class="arrow left-arrow"></span>
                                 </button>

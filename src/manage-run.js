@@ -1,7 +1,7 @@
-import {plotPerformanceCurve} from "./performanceCurve.js";
+import {plotPerformanceCurve, addMemLog, resetMemVis, showMemVis, updateMemVis} from "./performanceCurve.js";
 import {GPU_ALU, runWebGPU} from "./gpu-engine.js";
 import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.js";
-import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize, stressTestCB, flopsFormat, stressChangeM} from "./UI-manager.js";
+import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize, stressTestCB, flopsFormat, graphSync, stressChangeM} from "./UI-manager.js";
 import { WebGL_ALU } from "./webgl-engine.js";
 import { memTestCB } from "./UI-manager.js";
 
@@ -76,6 +76,7 @@ export async function runCPU() {
 
     AppState.isEngineRunning = true; 
     toggleUILock(true);
+    resetMemVis();
 
     try {
         let matrixSize = [256, 512, 1024, 2048, 4096];
@@ -84,7 +85,7 @@ export async function runCPU() {
         }
         let performanceData = [];
         let FinalGFLOPS = 0;
-        let mem_result = 0;
+        let isMemRun = false;
         const isStressTest = stressTestCB.checked;
         const runMat = matTestCB.checked || isStressTest;
 
@@ -142,15 +143,22 @@ export async function runCPU() {
         }
 
         if (memTestCB.checked && AppState.isEngineRunning && !isStressTest) {
+            isMemRun = true;
+            showMemVis(true);
+
             const memorySizes = [0.256, 0.512, 0.64, 1, 2 ,4 ,8 ,16 , 32, 64, 128, 256]; // NOTE you can add any value that u want to so test run on that size
             const testTypes = [
-                {id: 1, name: 'Read'},
-                {id: 2, name: 'Write'},
-                {id: 0, name: 'Copy'}
+                {id: 1, name: 'Read', domId: 'read'},
+                {id: 2, name: 'Write', domId: 'write'},
+                {id: 0, name: 'Copy', domId: 'copy'}
             ];
+
+            let finalBanVal = {read: 0, write: 0, copy: 0};
+            const maxDisplaySpeed = 700;
 
             for (let type of testTypes) {
 
+                addMemLog(`------ ${type.name} ------`, true);
                 let currentMem = [];
                 for (let size of memorySizes){
 
@@ -160,20 +168,15 @@ export async function runCPU() {
 
                     let convSize = size < 1 ? `${size * 1024}KB` : `${size}MB`;
                     statusText.innerText = `Testing Bandwidth ${type.name} ${convSize}...`;
-                    gflopsDisplay.innerText = `Calculating ${type.name} speed...`;
 
                     const gbps = await runMemCPU(size, type.id);
 
-                    if (gbps > mem_result) {
-                        mem_result = gbps;
-                    }
+                    finalBanVal[type.domId] = gbps;
+                    updateMemVis(type.domId, gbps, maxDisplaySpeed);
+                    addMemLog(`Size: ${convSize}, Bandwidth: ${gbps.toFixed(2)} GB/s`);
 
                     currentMem.push({matrix: `${size}MB`, gflops: gbps});
-
-                    if (!runMat) {
-                        AppState.currentGraphData = currentMem;
-                        plotPerformanceCurve(currentMem);
-                    }
+                    
                 }
 
                 if (currentMem.length > 0){
@@ -185,10 +188,11 @@ export async function runCPU() {
                 }
             }
 
-            if (!runMat && AppState.graphType.length > 0){
-                AppState.currentGraphNum = 0;
-                AppState.currentGraphData = AppState.graphType[0].data;
-            }
+            AppState.graphType.push({
+                name: "Memory Visualizer",
+                isVisualizer: true,
+                finalBanVal: {...finalBanVal }
+            });
         }
 
         if (performanceData.length > 0) {
@@ -196,11 +200,14 @@ export async function runCPU() {
                 name: "Matrix",
                 data: [...performanceData]
             });
+        }
+        if (AppState.graphType.length > 0 && AppState.isEngineRunning) {
+            AppState.currentGraphNum = AppState.graphType.length - 1;
             showGraphBtn(true);
+            graphSync();
         }
         if (AppState.isEngineRunning) {
-            if (mem_result > 0 && FinalGFLOPS === 0){
-                gflopsDisplay.innerText = `${mem_result.toFixed(2)} GB/s`;
+            if (isMemRun && FinalGFLOPS === 0){
                 statusText.innerText = `Completed`;
                 statusText.classList.remove("running");
                 statusText.classList.add('idle');

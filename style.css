@@ -665,6 +665,110 @@ body.light-mode .arrow-btn{
     z-index: 5; 
 }
 
+#mem-visualizer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 40px;
+    box-sizing: border-box;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    background-color: var(--panel-bg);
+    z-index: 10;
+}
+
+.mem-bars-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.mem-bar-row {
+    display: flex;
+    align-items: center;
+    color: var(--text-main);
+}
+
+.mem-label {
+    width: 65px;
+    font-weight: bold;
+    color: var(--accent);
+    font-size: 0.9rem;
+}
+
+.mem-track{
+    flex-grow: 1;
+    height: 14px;
+    background: var(--bg-color);
+    margin: 0 15px;
+    border-radius: 2px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.mem-fill{
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.2s ease-out;
+}
+.mem-value{
+    width: 85px;
+    text-align: right;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.mem-divider {
+    width: 100%;
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 15px 0;
+    flex-shrink: 0;
+}
+
+#raw-output-section{flex-grow: 1;
+    width: 100%;
+    overflow: hidden;
+}
+
+.terminal-box {
+    background: rgb(0, 0, 0);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    padding: 8px 12px;
+    text-align: left;
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+body.light-mode .terminal-box {
+    background: rgba(204, 203, 203, 0.203);
+}
+
+.mem-log {
+    margin-top: 8px;
+    color: var(--accent);
+}
+
+.memory-results {
+    display: grid;
+    gap: 0.2rem;
+    font-family: var(--font-mono);
+    font-size: clamp(0.9rem, 3vw, 1.1rem);
+}
+
+.memory-results span, .memory-results strong {
+    font: inherit;
+}
+
 .placeholder-text {
     position: absolute;
     top: 50%;

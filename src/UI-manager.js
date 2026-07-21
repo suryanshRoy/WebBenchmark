@@ -1,5 +1,5 @@
 import { AppState, processorSelect, stopBtn } from "./main";
-import { plotPerformanceCurve } from "./performanceCurve";
+import { plotPerformanceCurve, showMemVis, updateMemVis } from "./performanceCurve";
 
 // Sidebar Elements
 const menuBtn = document.getElementById('menu-btn');
@@ -101,30 +101,49 @@ export function stressChangeM(currentGflops, baselineGflops) { //manager
 }
 
 function changeGraphNum(moveGraph){
-    if (AppState.graphType.length <= 1) return;
-    AppState.currentGraphNum += moveGraph;
-    if (AppState.currentGraphNum < 0) {
-        AppState.currentGraphNum = AppState.graphType.length - 1;
-    }
-    else if (AppState.currentGraphNum >= AppState.graphType.length) {
-        AppState.currentGraphNum = 0;
+    if (AppState.graphType.length === 0) return;
+
+    if (moveGraph !== 0 && AppState.graphType.length > 1) {
+        AppState.currentGraphNum += moveGraph;
+        if (AppState.currentGraphNum < 0) {
+            AppState.currentGraphNum = AppState.graphType.length - 1;
+        }
+        else if (AppState.currentGraphNum >= AppState.graphType.length) {
+            AppState.currentGraphNum = 0;
+        }
     }
 
     const activeGraph = AppState.graphType[AppState.currentGraphNum];
-    AppState.currentGraphData = activeGraph.data;
-    
-    plotPerformanceCurve(AppState.currentGraphData);
+    if (activeGraph.isVisualizer) {
+        showMemVis(true);
+        if (activeGraph.finalBanVal) {
+            for (const [type, speed] of Object.entries(activeGraph.finalBanVal)) {
+                updateMemVis(type, speed, 700);
+            }
+        }
+    } else {
+        showMemVis(false);
+        AppState.currentGraphData = activeGraph.data;
+
+        plotPerformanceCurve(AppState.currentGraphData);
 
    const resultText = document.getElementsByClassName('.metric-box h3');
-   const displayText = document.getElementById("gflops-current");
+    const displayText = document.getElementById("gflops-current");
    if (resultText && displayText) {
-        const maxGflops = Math.max(...activeGraph.data.map(item => item.gflops || 0));
-        if (maxGflops >= 1000) {
-            displayText.innerText = `${(maxGflops / 1000).toFixed(2)} TFLOPS`;
-        } else {
-            displayText.innerText = `${maxGflops.toFixed(2)} GFLOPS`;
+            const maxGflops = Math.max(...activeGraph.data.map(item => item.gflops || 0));
+            if (activeGraph.name && activeGraph.name.includes('Memory')) {
+                displayText.innerText = `${maxGflops.toFixed(2)} GB/s`;
+            } else if (maxGflops >= 1000) {
+                displayText.innerText = `${(maxGflops / 1000).toFixed(2)} TFLOPS`;
+            } else {
+                displayText.innerText = `${maxGflops.toFixed(2)} GFLOPS`;
+            }
         }
-   }
+    }
+}
+
+export function graphSync() {
+    changeGraphNum(0);
 }
 
 if (prevBtn && nextBtn) {
