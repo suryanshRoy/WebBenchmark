@@ -1,7 +1,7 @@
 import {plotPerformanceCurve} from "./performanceCurve.js";
 import {detectUserGPU, processorListner} from "./processorManager.js";
 import {runCPU, runGPU, benchmarkWorker} from "./manage-run.js";
-import {toggleUILock, matTestCB, aluTestCB, stressTestCB, updateTimerDisplay, memTestCB} from "./UI-manager.js";
+import {toggleUILock, matTestCB, aluTestCB, stressTestCB, updateTimerDisplay, memTestCB, flopsFormat, stressChangeM} from "./UI-manager.js";
 
 //  btn and warning elements
 export const startBtn = document.getElementById('start-btn');
@@ -46,6 +46,16 @@ export const gflopsDisplay = document.getElementById('gflops-current');
 
 // Start Button Control!!!
 startBtn.addEventListener('click', () => {
+    if (startBtn.classList.contains('is-disabled')) {
+        warningMsg.innerText = "Benchmark is already running please stop the stress test first!";
+        
+        startBtn.classList.add('vibrate-active');
+        setTimeout(() => startBtn.classList.remove('vibrate-active'), 300);
+        warningMsg.classList.add('show-warning');
+        setTimeout(() => warningMsg.classList.remove('show-warning'), 3500);
+        return;
+    }
+
     if (!matTestCB.checked && !aluTestCB.checked && !stressTestCB.checked && !memTestCB.checked) {
         warningMsg.innerText = "Please select at least one test to run!";
         warningMsg.classList.add('show-warning');
@@ -111,6 +121,7 @@ stopBtn.addEventListener('click', () => {
         setTimeout(() => warningMsg.classList.remove('show-warning'), 3500);
         return;
     }
+    const hasUserEndTest = stressTestCB.checked && (AppState.stressRunTime - Date.now() <= 100);
     AppState.isEngineRunning = false;
     toggleUILock(false);
     clearInterval(AppState.RunTimeState);
@@ -125,8 +136,18 @@ stopBtn.addEventListener('click', () => {
     if (AppState.currentProcessor === 'CPU') {
         benchmarkWorker.postMessage({type: 'STOP'});
     }
-    else {
-        gflopsDisplay.innerText = "GPU Test Aborted";
+    if (hasUserEndTest) {
+        const fstVal = AppState.currentGraphData[0];
+        const lastVal = AppState.currentGraphData[AppState.currentGraphData.length - 1];
+        const baseVal = fstVal ? fstVal.gflops : 0;
+        const finalGflops = lastVal ? lastVal.gflops : 0;
+        
+        flopsFormat(finalGflops);
+        statusText.innerText = 'Completed';
+        gflopsDisplay.innerHTML = stressChangeM(finalGflops, baseVal);
+    } else {
+        gflopsDisplay.innerText = `${AppState.currentProcessor} Test Aborted`;
+        statusText.innerText = 'Ready';
     }
 
     stopBtn.classList.add('is-disabled');

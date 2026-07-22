@@ -1,4 +1,4 @@
-import { AppState, processorSelect, stopBtn } from "./main";
+import { AppState, processorSelect, startBtn, stopBtn } from "./main";
 import { plotPerformanceCurve, showMemVis, updateMemVis } from "./performanceCurve";
 
 // Sidebar Elements
@@ -421,6 +421,11 @@ export function toggleUILock(isLocked){
     advSettingsToggle.disabled = isLocked;
     stressTestCB.disabled = isLocked;
     aiChatCB.disabled = isLocked;
+    if (isLocked) {
+        startBtn.classList.add('is-disabled');
+    } else {
+        startBtn.classList.remove('is-disabled');
+    }
 
     if (isLocked) {
         aluTestCB.disabled = true; // disable alu when running

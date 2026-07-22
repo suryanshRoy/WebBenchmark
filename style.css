@@ -510,6 +510,11 @@ input:checked + .slider:before {
     cursor: not-allowed;
     background-color: rgb(150, 50, 50);
 }
+.btn.primary:disabled, .btn.primary.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--accent);
+}
 
 .icon-btn {
     background:none;
