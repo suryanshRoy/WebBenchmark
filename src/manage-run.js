@@ -146,7 +146,7 @@ export async function runCPU() {
             isMemRun = true;
             showMemVis(true);
 
-            const memorySizes = [0.256, 0.512, 0.64, 1, 2 ,4 ,8 ,16 , 32, 64, 128, 256]; // NOTE you can add any value that u want to so test run on that size
+            const memorySizes = [0.25, 0.5, 1, 2 ,4 ,8 ,16 , 32, 64, 128, 256]; // NOTE you can add any value that u want to so test run on that size
             const testTypes = [
                 {id: 1, name: 'Read', domId: 'read'},
                 {id: 2, name: 'Write', domId: 'write'},
@@ -166,7 +166,7 @@ export async function runCPU() {
                         break;
                     }
 
-                    let convSize = size < 1 ? `${size * 1024}KB` : `${size}MB`;
+                    let convSize = size < 1 ? `${Math.round(size * 1024)}KB` : `${size}MB`;
                     statusText.innerText = `Testing Bandwidth ${type.name} ${convSize}...`;
 
                     const gbps = await runMemCPU(size, type.id);
@@ -174,9 +174,6 @@ export async function runCPU() {
                     finalBanVal[type.domId] = gbps;
                     updateMemVis(type.domId, gbps, maxDisplaySpeed);
                     addMemLog(`Size: ${convSize}, Bandwidth: ${gbps.toFixed(2)} GB/s`);
-
-                    currentMem.push({matrix: `${size}MB`, gflops: gbps});
-                    
                 }
 
                 if (currentMem.length > 0){

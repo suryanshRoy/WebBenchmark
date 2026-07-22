@@ -20,6 +20,7 @@ export const aluTestCB = document.getElementById("alu-test-checkbox");
 export const stressTestCB = document.getElementById("stress-test-checkbox");
 export const matSize = document.getElementById("matrix-size");
 export const memTestCB = document.getElementById("mem-test-cb")
+export const aiChatCB = document.getElementById("ai-chatCB");
 
 const panelHeader = document.getElementById('set-panel-header');
 const panelContent = document.getElementById('set-panel-content');
@@ -29,6 +30,11 @@ const advSettingsToggle = document.getElementById('advanced-set-id');
 const advChevronIcon = document.getElementById('adv-chevron');
 const advSettingsContainer = document.getElementById('adv-set-container');
 
+const aiCont = document.getElementById("aiChatCont");
+const ChatInp = document.getElementById("aiChatInpSec");
+const ChatSendBtn = document.getElementById("sendBtnAI");
+const aiErrMsg = document.getElementById("ai-err-msg");
+
 panelHeader.addEventListener('click', () => {
     panelContent.classList.toggle('collapsed');
     chevronIcon.classList.toggle('up');
@@ -37,6 +43,24 @@ panelHeader.addEventListener('click', () => {
 advSettingsToggle.addEventListener('click', () => {
     advSettingsContainer.classList.toggle('hidden');
     advChevronIcon.classList.toggle('up');
+});
+
+// ai interface
+aiChatCB?.addEventListener('change', (e) => {
+    aiCont.classList.toggle('hidden', !e.target.checked);
+});
+
+function handleAiSubmit() {
+    if (ChatInp.value.trim() === "") return;
+    
+    aiErrMsg.classList.add('show-warning');
+    setTimeout(() => aiErrMsg.classList.remove('show-warning'), 20000);
+    ChatInp.value = "";
+}
+
+ChatSendBtn?.addEventListener('click', handleAiSubmit);
+ChatInp?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleAiSubmit();
 });
 
 // Btns for graphs
@@ -157,10 +181,17 @@ function stressTestUI(onStressTest) {
         aluTestCB.checked = false;
         matTestCB.disabled = true;
         aluTestCB.disabled = true;
+        memTestCB.checked = false;
+        memTestCB.disabled = true;
+        aiChatCB.checked = false;
+        aiChatCB.disabled = true;
+        aiCont.classList.add("hidden");
     }
     else {
         matTestCB.disabled = false;
         aluTestCB.disabled = processorSelect.value === "CPU"; // disable ALU test if CPU is selected
+        memTestCB.disabled = false;
+        aiChatCB.disabled = false;
     }
 }
 
@@ -389,6 +420,7 @@ export function toggleUILock(isLocked){
     matTestCB.disabled = isLocked;
     advSettingsToggle.disabled = isLocked;
     stressTestCB.disabled = isLocked;
+    aiChatCB.disabled = isLocked;
 
     if (isLocked) {
         aluTestCB.disabled = true; // disable alu when running

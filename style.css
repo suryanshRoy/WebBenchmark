@@ -389,7 +389,7 @@ input:checked + .slider:before {
     align-items: center;
 }
 
-.ai-chat-input {
+.aiChatIn {
     width: 100%;
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
@@ -401,13 +401,13 @@ input:checked + .slider:before {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.ai-chat-input:focus {
+.aiChatIn:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
-.ai-chat-send-btn {
+.aiSend-Btn {
     position: absolute;
     right: 10px;
     background: none;
@@ -421,11 +421,11 @@ input:checked + .slider:before {
     transition: background-color 0.2s ease;
 }
 
-.ai-chat-send-btn:hover {
+.aiSend-Btn:hover {
     background-color: rgba(136, 136, 136, 0.2);
 }
 
-.ai-chat-send-btn svg {
+.aiSend-Btn svg {
     stroke: var(--text-main);
     width: 20px;
     height: 20px;
@@ -784,14 +784,21 @@ body.light-mode .terminal-box {
 .status-warning-msg {
     color: var(--danger);
     font-size: 0.85rem;
-    margin-top: 0.25rem;
+    margin-top: 0;
+    max-height: 0;
+    overflow: hidden;
     opacity: 0;
     transform: translateY(-5px);
     transition: opacity 0.3s ease, transform 0.3s ease;
     text-align: center;
     pointer-events: none;
 }
-.status-warning-msg.show-warning {opacity: 1; transform: translateY(0); }
+.status-warning-msg.show-warning {
+    opacity: 1; transform: translateY(0);
+    transform: translateY(0);
+    max-height: 150px;
+    margin-top: 0.5rem;
+}
 
 @keyframes error-vibrate {
     0%, 100% {transform: translateX(0);}

@@ -61,7 +61,7 @@
                                 <input type="checkbox" id="mem-test-cb" checked> Memory Bandwidth
                             </label>
                             <label class="test-checkbox">
-                                <input type="checkbox" disabled> AI Running test <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span>
+                                <input type="checkbox" id="ai-chatCB"> AI Running test <span style="font-size: 0.7rem; color: var(--text-muted);">[Soon]</span>
                             </label>
                         </div>
 
@@ -116,14 +116,21 @@
                 </section>
                 
                 <!-- chat panel -->
-                <section class="ai-chat-panel">
-                    <input type="text" class="ai-chat-input" placeholder="Ask Mark AI about your system performance...">
-                    <button class="ai-chat-send-btn" title="Send to Mark AI">
+                <div id="aiChatCont" class="hidden">
+                <section class="ai-chat-panel" style="margin-bottom: 0;">
+                    <input type="text" id="aiChatInpSec" class="aiChatIn" placeholder="Run AI locally on your Web browser!">
+                    <button class="aiSend-Btn" id="sendBtnAI" title="Send to Mark AI">
                         <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" viewBox="0 0 24 24" fill="none" 
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line>
-                        <polyline points="5 12 12 5 19 12"></polyline></svg>
+                        <polyline points="5 12 12 5 19 12"></polyline>
+                        </svg>
                     </button>
                 </section>
+                <p id="ai-err-msg" class="status-warning-msg" style="font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.4; padding: 0 1rem;">
+                        WebBenchmark is constantly being updated, and Mark AI will take about a month to be implemented!
+                        After which there will be many models that could be run directly on the web browser with full security and privacy!
+                </p>
+                </div>
 
                 <div class="dashboard">
                     <!-- metric result panel -->
