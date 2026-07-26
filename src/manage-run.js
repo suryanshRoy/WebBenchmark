@@ -4,6 +4,7 @@ import {gflopsDisplay, warningMsg, statusText, AppState, stopBtn} from "./main.j
 import {computeType, iterInput, toggleUILock, showGraphBtn, matTestCB, aluTestCB, matSize, stressTestCB, flopsFormat, graphSync, stressChangeM} from "./UI-manager.js";
 import { WebGL_ALU } from "./webgl-engine.js";
 import { memTestCB } from "./UI-manager.js";
+import memBandCode from './memBand.wgsl?raw';
 
 export const benchmarkWorker = new Worker(new URL('./worker.js', import.meta.url));
 
@@ -64,6 +65,139 @@ export function runMemCPU(sizeMB, runType){
         });
         console.log(`Current size: ${sizeMB}MB, runType: ${runType}`);
     });
+}
+
+export async function runMemGPU(device, sizeMB, runType) {
+    const reqByte = Math.floor(sizeMB * 1024*1024);
+
+    const maxBindSize = device.limits?.maxStorageBufferBindingSize || (128*1024*1024);
+    const maxBuf = device.limits?.maxBufferSize || (256 * 1024 * 1024);
+
+    let byteSize = Math.min(reqByte, Math.min(maxBindSize, maxBuf))
+    byteSize = Math.floor(byteSize / 16) * 16;
+    
+    if (byteSize <= 0){
+        return 0;
+    }
+    const srcBuf = device.createBuffer({
+        size: byteSize,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+    });
+    const dstBuf = device.createBuffer({
+        size: byteSize,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+    });
+
+    let numLoop = Math.round(2048 / sizeMB);
+    if (numLoop < 5){ // REVIEW maybe need to fix this
+        numLoop = 5;
+    }
+    if (numLoop > 200){
+        numLoop = 200;
+    }
+    let gbps = 0;
+
+    if (runType === 0) { // 0 for copy
+        const cmdEncoder = device.createCommandEncoder();
+        for (let i = 0; i<numLoop; i++){
+            cmdEncoder.copyBufferToBuffer(srcBuf, 0, dstBuf, 0, byteSize);
+        }
+
+        const startTime = performance.now();
+        device.queue.submit([cmdEncoder.finish()]);
+        await device.queue.onSubmittedWorkDone();
+        const endTime = performance.now();
+
+        gbps = ((byteSize * numLoop * 2.0) / 1e9) / ((endTime - startTime) / 1000);
+    }
+    else {
+        const shaderCode = device.createShaderModule({code: memBandCode});
+
+        const comPipleline = await device.createComputePipelineAsync({
+            layout: 'auto',
+            compute: {module: shaderCode, entryPoint: runType === 1 ? 'read_main' : 'write_main'}
+        });
+
+        const bindGrp = device.createBindGroup({
+            layout: comPipleline.getBindGroupLayout(0),
+
+            entries: [{binding: 0, resource: {buffer: srcBuf}}, 
+                     {binding: 1, resource: {buffer: dstBuf}}]
+        });
+    
+        const workgroupCount = Math.ceil((byteSize / 16) /256);
+        const cmdEncoder = device.createCommandEncoder();
+        
+        for (let i= 0; i<numLoop; i++) {
+            const pass = cmdEncoder.beginComputePass();
+            pass.setPipeline(comPipleline);
+            pass.setBindGroup(0, bindGrp);
+            pass.dispatchWorkgroups(workgroupCount);
+            pass.end();
+        }
+
+        const stTime = performance.now();
+        device.queue.submit([cmdEncoder.finish()]);
+        await device.queue.onSubmittedWorkDone();
+        const endTime = performance.now();
+
+        gbps = ((byteSize * numLoop) / 1e9) / ((endTime - stTime) / 1000);
+    }
+
+    srcBuf.destroy();
+    dstBuf.destroy();
+    return gbps;
+}
+
+export async function execMemTest(runCall, processorName, maxMemVal) {
+    showMemVis(true);
+
+    const memorySizes = [0.25, 0.5, 1, 2 ,4 ,8 ,16 , 32, 64, 128, 256]; // NOTE you can add any value that u want to so test run on that size
+    const testTypes = [
+        {id: 1, name: 'Read', domId: 'read'},
+        {id: 2, name: 'Write', domId: 'write'},
+        {id: 0, name: 'Copy', domId: 'copy'}
+    ];
+
+    let finalBanVal = {read: 0, write: 0, copy: 0};
+    const maxDisplaySpeed = 700;
+
+    for (let type of testTypes) {
+
+        addMemLog(`------ ${type.name} ------`, true);
+        let currentMem = [];
+        for (let size of memorySizes){
+
+            if (!AppState.isEngineRunning){
+                break;
+            }
+
+            let convSize = size < 1 ? `${Math.round(size * 1024)}KB` : `${size}MB`;
+            statusText.innerText = `Testing Bandwidth ${type.name} ${convSize}...`;
+
+            const gbps = await runCall(size, type.id);
+
+            finalBanVal[type.domId] = gbps;
+            updateMemVis(type.domId, gbps, maxDisplaySpeed);
+            addMemLog(`Size: ${convSize}, Bandwidth: ${gbps.toFixed(2)} GB/s`);
+        }
+
+        if (currentMem.length > 0){
+
+            AppState.graphType.push({
+                name: `Memory ${type.name}`,
+                data: [...currentMem]
+            });
+        }
+    }
+
+    AppState.graphType.push({
+        name: "Memory Visualizer",
+        isVisualizer: true,
+        finalBanVal: {...finalBanVal }
+    });
+
+    return true;
 }
 
 export async function runCPU() {
@@ -143,53 +277,7 @@ export async function runCPU() {
         }
 
         if (memTestCB.checked && AppState.isEngineRunning && !isStressTest) {
-            isMemRun = true;
-            showMemVis(true);
-
-            const memorySizes = [0.25, 0.5, 1, 2 ,4 ,8 ,16 , 32, 64, 128, 256]; // NOTE you can add any value that u want to so test run on that size
-            const testTypes = [
-                {id: 1, name: 'Read', domId: 'read'},
-                {id: 2, name: 'Write', domId: 'write'},
-                {id: 0, name: 'Copy', domId: 'copy'}
-            ];
-
-            let finalBanVal = {read: 0, write: 0, copy: 0};
-            const maxDisplaySpeed = 700;
-
-            for (let type of testTypes) {
-
-                addMemLog(`------ ${type.name} ------`, true);
-                let currentMem = [];
-                for (let size of memorySizes){
-
-                    if (!AppState.isEngineRunning){
-                        break;
-                    }
-
-                    let convSize = size < 1 ? `${Math.round(size * 1024)}KB` : `${size}MB`;
-                    statusText.innerText = `Testing Bandwidth ${type.name} ${convSize}...`;
-
-                    const gbps = await runMemCPU(size, type.id);
-
-                    finalBanVal[type.domId] = gbps;
-                    updateMemVis(type.domId, gbps, maxDisplaySpeed);
-                    addMemLog(`Size: ${convSize}, Bandwidth: ${gbps.toFixed(2)} GB/s`);
-                }
-
-                if (currentMem.length > 0){
-
-                    AppState.graphType.push({
-                        name: `Memory ${type.name}`,
-                        data: [...currentMem]
-                    });
-                }
-            }
-
-            AppState.graphType.push({
-                name: "Memory Visualizer",
-                isVisualizer: true,
-                finalBanVal: {...finalBanVal }
-            });
+            isMemRun = await execMemTest(runMemCPU, "CPU", 700);
         }
 
         if (performanceData.length > 0) {
@@ -264,6 +352,7 @@ export async function runGPU() {
         }
         let performanceData = [];
         let FinalGFLOPS = 0;
+        let isMemRun = false;
 
         const isStressTest = stressTestCB.checked;
         const runMat = matTestCB.checked || isStressTest;
@@ -358,6 +447,10 @@ export async function runGPU() {
             }
         }
 
+        if (memTestCB.checked && AppState.isEngineRunning && !isStressTest && !isWebGL && device) {
+            isMemRun = await execMemTest((size, type) => runMemGPU(device, size, type), "GPU", 1000);
+        }
+
         if (AppState.isEngineRunning && aluTestCB.checked && !isStressTest) {
             let displaySpeed = `${FinalGFLOPS.toFixed(2)} GFLOPS`;
             if (FinalGFLOPS > 0) {
@@ -427,12 +520,25 @@ export async function runGPU() {
         onFinishManager(true, FinalGFLOPS, ResultAluGflops);
     }
         else if (AppState.isEngineRunning) {
+            if (AppState.graphType.length > 0) {
+                AppState.currentGraphNum = AppState.graphType.length - 1;
+                showGraphBtn(true);
+                graphSync();
+            }
+            if (isMemRun && FinalGFLOPS === 0) {
+                statusText.innerText = `Completed`;
+                statusText.classList.remove("running");
+                statusText.classList.add('idle');
+                stopBtn.classList.add("is-disabled");
+                AppState.isEngineRunning = false;
+                toggleUILock(false);
+            } else {
             if (AppState.activeGPUDevice) {
                 AppState.activeGPUDevice.destroy();
                 AppState.activeGPUDevice = null;
             }
             onFinishManager(false, FinalGFLOPS, 0);
-        }
+        }}
     }
     catch (error) {
         handleError("GPU", error);
@@ -441,6 +547,10 @@ export async function runGPU() {
 
 function onFinishManager(onALU, FinalGFLOPS, ResultAluGflops) {
     if (AppState.isEngineRunning) {
+
+        const actGraph = AppState.graphType[AppState.currentGraphNum];
+        if (!actGraph || !actGraph.isVisualizer) {
+
         let displaySpeed = "";
         if (onALU) {
             if (ResultAluGflops >= 1000) {
@@ -457,6 +567,8 @@ function onFinishManager(onALU, FinalGFLOPS, ResultAluGflops) {
             }
         }
         gflopsDisplay.innerText = displaySpeed;
+        }
+        
         statusText.innerText = 'Completed';
         statusText.classList.remove("running");
         statusText.classList.add('idle');
