@@ -49,6 +49,8 @@
 >   - Fix: Please stop the high computational background tasks that maybe interferring with the required resources for this benchmarking and use recommended browsers like chrome, microsoft edge, or safari.
 ---
 
+## AI Acknowledgement
+> I used AI in this project as helping tool! AI helped in initial setup of emsdk and very starting UI/UX but main purpose of AI was to help me fixing up the magic words issues, WASM build errors, WebGL and WebGPU optimisation across different devices! 
 
 # MIT LICENSE
 > [!WARNING]
