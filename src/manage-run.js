@@ -88,7 +88,7 @@ export async function runMemGPU(device, sizeMB, runType) {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
     });
 
-    let numLoop = Math.round(2048 / sizeMB);
+    let numLoop = Math.round(16384 / sizeMB);
     if (numLoop < 5){ // REVIEW maybe need to fix this
         numLoop = 5;
     }
@@ -100,8 +100,13 @@ export async function runMemGPU(device, sizeMB, runType) {
     if (runType === 0) { // 0 for copy
         const cmdEncoder = device.createCommandEncoder();
         for (let i = 0; i<numLoop; i++){
+            if(i % 2 === 0){
             cmdEncoder.copyBufferToBuffer(srcBuf, 0, dstBuf, 0, byteSize);
-        }
+            }
+            else {
+                cmdEncoder.copyBufferToBuffer(dstBuf, 0, srcBuf, 0, byteSize);
+            }
+        }            
 
         const startTime = performance.now();
         device.queue.submit([cmdEncoder.finish()]);
@@ -118,20 +123,24 @@ export async function runMemGPU(device, sizeMB, runType) {
             compute: {module: shaderCode, entryPoint: runType === 1 ? 'read_main' : 'write_main'}
         });
 
-        const bindGrp = device.createBindGroup({
+        const bindGrp0 = device.createBindGroup({
+            layout: comPipleline.getBindGroupLayout(0),
+            entries: [{binding: 0, resource: {buffer: srcBuf}}, {binding: 1, resource: {buffer: dstBuf}}]
+        });
+        const bindGrp1 = device.createBindGroup({
             layout: comPipleline.getBindGroupLayout(0),
 
-            entries: [{binding: 0, resource: {buffer: srcBuf}}, 
-                     {binding: 1, resource: {buffer: dstBuf}}]
+            entries: [{binding: 0, resource: {buffer: dstBuf}}, 
+                     {binding: 1, resource: {buffer: srcBuf}}]
         });
     
-        const workgroupCount = Math.ceil((byteSize / 16) /256);
+        const workgroupCount = Math.ceil(((byteSize / 16) / 4) /256);
         const cmdEncoder = device.createCommandEncoder();
         
         for (let i= 0; i<numLoop; i++) {
             const pass = cmdEncoder.beginComputePass();
             pass.setPipeline(comPipleline);
-            pass.setBindGroup(0, bindGrp);
+            pass.setBindGroup(0, i% 2 === 0 ? bindGrp0 : bindGrp1);
             pass.dispatchWorkgroups(workgroupCount);
             pass.end();
         }
@@ -464,6 +473,8 @@ export async function runGPU() {
 
             await new Promise(resolve => setTimeout(resolve, 3000));
             if (!AppState.isEngineRunning) return;
+
+            showMemVis(false);
 
             statusText.innerText = 'Computing ALU Benchmark Test...'
             gflopsDisplay.innerText = 'Computing ALU Benchmark Test...';
