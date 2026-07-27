@@ -1,4 +1,4 @@
-# WebBenchmark 🔥
+# [WebBenchmark](https://suryanshRoy.github.io/WebBenchmark) 🔥
 
 - **A Benchmarking tool that can provide you detailed result about access and performance of your device across Websites and browsers.**
 
