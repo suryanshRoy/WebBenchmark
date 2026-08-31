@@ -13,6 +13,7 @@
 2. **ALU benchmarking:** *Measures up results(in FLOPS) close to advertised results of device by computing ALU(Arithmetic Logic Unit) operations!* 
 3. **Thermal throttling test:** *Calculates the real time performance drop of the device by running a heavy load on the device for 5 minutes(adjustable)*
 4. **Memory bandwidth test:** *Measures memory bandwidth of the device and calculates READ, WRITE and COPY speed. It measures these speed for ```L1, L2, L3 caches, DRAM and RAM```.*
+<img width="1470" height="956" alt="Screenshot 2026-08-31 at 10 04 36 PM" src="https://github.com/user-attachments/assets/cf767f17-fab4-400a-8ca6-ba6c92f682c6" />
 
 ## Hardware support
 - A CPU test is supported so benchmarking could be done on every kind of devices! For high accuracy it uses ```WASM```
