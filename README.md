@@ -1,10 +1,12 @@
-# [WebBenchmark 🔥](https://suryanshRoy.github.io/WebBenchmark)
+# [WebBenchmark](https://suryanshRoy.github.io/WebBenchmark) 🔥
 
 - ***WebBenchmark** is a opensource project that allows you to find out the access provided by your device to it's browser and shows how modern device handles the websites*.
 
 
 > [!NOTE]
 > This project is under early stage developement!
+
+<img width="1470" height="956" alt="Screenshot 2026-08-31 at 10 04 36 PM" src="https://github.com/user-attachments/assets/cf767f17-fab4-400a-8ca6-ba6c92f682c6" />
 
 - See this video for any doubt on readme being written by ai.
 
@@ -14,14 +16,14 @@
 
 - CPU features are available using ```wasm```.
     
-    > [!TIP]
-    > - For best performance try using ```chrome```, ```safari``` or ```microsoft edge```
+> [!TIP]
+> - For best performance try using ```chrome```, ```safari``` or ```microsoft edge```
 
 ## Current features
 - *Currently these options are available in benchmark settings that you can test to benchmark your device performance*
   
-  > [!Note]
-  > CPU and GPU have different options and some of the  options may be available on one device that is not available in other due to stability purposes.
+> [!Note]
+> CPU and GPU have different options and some of the  options may be available on one device that is not available in other due to stability purposes.
 
 1. **Matrix FLOPS Test**: Runs up a series of matrix operations to stress the device performance and provides result in GFLOPS.
 
