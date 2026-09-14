@@ -8,9 +8,6 @@
 
 <img width="1470" height="956" alt="Screenshot 2026-08-31 at 10 04 36 PM" src="https://github.com/user-attachments/assets/cf767f17-fab4-400a-8ca6-ba6c92f682c6" />
 
-- See this video for any doubt on readme being written by ai.
-
-
 ## Hardware support
 - Currently GPU features are available using ```webgpu```. For older device it also supports ```webgl2``` and ```webgl```.
 
